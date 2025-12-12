@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Idle Clicker with Shop</title>
+    <title>Idle Clicker: Save & Load Edition</title>
     <style>
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -14,16 +14,17 @@
             align-items: center;
             height: 100vh;
             margin: 0;
-            overflow: hidden; /* Prevents scrolling */
+            overflow: hidden;
         }
 
         .layout {
             display: flex;
             gap: 20px;
-            margin-top: 50px;
+            margin-top: 30px;
             max-width: 800px;
             width: 100%;
             padding: 20px;
+            height: 70vh; /* Fixed height to allow scrolling in shop */
         }
 
         /* --- LEFT SIDE: The Clicker --- */
@@ -31,7 +32,7 @@
             flex: 1;
             text-align: center;
             background-color: #34495e;
-            padding: 40px;
+            padding: 20px;
             border-radius: 15px;
             box-shadow: 0 10px 25px rgba(0,0,0,0.5);
             display: flex;
@@ -57,9 +58,9 @@
             background-color: #e74c3c;
             border: none;
             color: white;
-            width: 200px;
-            height: 200px;
-            border-radius: 50%; /* Makes it a circle */
+            width: 180px;
+            height: 180px;
+            border-radius: 50%;
             font-size: 1.5rem;
             font-weight: bold;
             cursor: pointer;
@@ -80,7 +81,13 @@
             padding: 20px;
             border-radius: 15px;
             box-shadow: 0 10px 25px rgba(0,0,0,0.5);
-            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .shop-items {
+            overflow-y: auto; /* Allows scrolling if list gets long */
+            flex-grow: 1;
         }
 
         h2 {
@@ -119,6 +126,34 @@
             font-weight: bold;
             color: #e67e22;
         }
+
+        /* --- FOOTER: Settings --- */
+        .settings-area {
+            margin-top: 20px;
+            display: flex;
+            gap: 10px;
+        }
+
+        #reset-btn {
+            background-color: #95a5a6;
+            border: none;
+            padding: 10px 20px;
+            color: white;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 0.9rem;
+        }
+        
+        #reset-btn:hover {
+            background-color: #7f8c8d;
+        }
+
+        #save-status {
+            color: #bdc3c7;
+            font-size: 0.8rem;
+            margin-left: 10px;
+            align-self: center;
+        }
     </style>
 </head>
 <body>
@@ -136,34 +171,41 @@
 
         <div class="shop-area">
             <h2>🛒 Upgrade Shop</h2>
-            
-            <button id="buy-cursor" class="upgrade-btn" onclick="buyCursor()">
-                <div>
-                    <strong>💪 Stronger Clicks</strong><br>
-                    <small>+1 score per click</small>
-                </div>
-                <div class="cost" id="cursor-cost">Cost: 10</div>
-            </button>
+            <div class="shop-items">
+                <button id="buy-cursor" class="upgrade-btn" onclick="buyCursor()">
+                    <div>
+                        <strong>💪 Stronger Clicks</strong><br>
+                        <small>+1 score per click</small>
+                    </div>
+                    <div class="cost" id="cursor-cost">Cost: 10</div>
+                </button>
 
-            <button id="buy-auto" class="upgrade-btn" onclick="buyAutoClicker()">
-                <div>
-                    <strong>🤖 Auto Bot</strong><br>
-                    <small>+1 score per second</small>
-                </div>
-                <div class="cost" id="auto-cost">Cost: 50</div>
-            </button>
+                <button id="buy-auto" class="upgrade-btn" onclick="buyAutoClicker()">
+                    <div>
+                        <strong>🤖 Auto Bot</strong><br>
+                        <small>+1 score per second</small>
+                    </div>
+                    <div class="cost" id="auto-cost">Cost: 50</div>
+                </button>
+            </div>
         </div>
+    </div>
+
+    <div class="settings-area">
+        <button id="reset-btn" onclick="resetGame()">⚠️ Reset Progress</button>
+        <span id="save-status">Game saved.</span>
     </div>
 
     <script>
         // --- GAME VARIABLES ---
-        let score = 0;
-        
-        let clickPower = 1;      // How much you get per click
-        let cursorCost = 10;     // Cost to upgrade click
-
-        let autoClickers = 0;    // How many auto clickers you have
-        let autoClickerCost = 50; // Cost to buy an auto clicker
+        // We set default values, but we might overwrite them in the loadGame() function
+        let gameData = {
+            score: 0,
+            clickPower: 1,
+            cursorCost: 10,
+            autoClickers: 0,
+            autoClickerCost: 50
+        };
 
         // --- DOM ELEMENTS ---
         const scoreDisplay = document.getElementById('score-display');
@@ -176,59 +218,97 @@
         
         const buyAutoBtn = document.getElementById('buy-auto');
         const autoCostDisplay = document.getElementById('auto-cost');
+        
+        const saveStatus = document.getElementById('save-status');
 
         // --- CORE FUNCTIONS ---
 
         // 1. The Main Click
         clickBtn.addEventListener('click', () => {
-            score += clickPower; // Add current power to score
+            gameData.score += gameData.clickPower;
             updateUI();
         });
 
-        // 2. Buy "Stronger Clicks" Upgrade
+        // 2. Buy Functions
         function buyCursor() {
-            if (score >= cursorCost) {
-                score -= cursorCost;            // Pay the cost
-                clickPower++;                   // Increase power
-                cursorCost = Math.ceil(cursorCost * 1.5); // Increase cost for next time
+            if (gameData.score >= gameData.cursorCost) {
+                gameData.score -= gameData.cursorCost;
+                gameData.clickPower++;
+                gameData.cursorCost = Math.ceil(gameData.cursorCost * 1.5);
                 updateUI();
+                saveGame(); // Save immediately on purchase
             }
         }
 
-        // 3. Buy "Auto Bot" Upgrade
         function buyAutoClicker() {
-            if (score >= autoClickerCost) {
-                score -= autoClickerCost;       // Pay the cost
-                autoClickers++;                 // Increase amount of bots
-                autoClickerCost = Math.ceil(autoClickerCost * 1.5); // Increase cost
+            if (gameData.score >= gameData.autoClickerCost) {
+                gameData.score -= gameData.autoClickerCost;
+                gameData.autoClickers++;
+                gameData.autoClickerCost = Math.ceil(gameData.autoClickerCost * 1.5);
                 updateUI();
+                saveGame(); // Save immediately on purchase
             }
         }
 
-        // 4. The "Game Loop" (Runs once every second)
+        // 3. The Game Loop (Run every second)
         setInterval(() => {
-            if (autoClickers > 0) {
-                score += autoClickers;
+            if (gameData.autoClickers > 0) {
+                gameData.score += gameData.autoClickers;
                 updateUI();
             }
-        }, 1000); // 1000 milliseconds = 1 second
+        }, 1000);
+        
+        // 4. Auto-Save Loop (Runs every 30 seconds)
+        setInterval(() => {
+            saveGame();
+        }, 30000);
 
-        // 5. Update the User Interface (Text and Buttons)
-        function updateUI() {
-            scoreDisplay.textContent = score;
-            perClickDisplay.textContent = `Per Click: ${clickPower}`;
-            perSecondDisplay.textContent = `Per Second: ${autoClickers}`;
+        // --- SAVE / LOAD SYSTEM ---
 
-            // Update Shop Prices
-            cursorCostDisplay.textContent = `Cost: ${cursorCost}`;
-            autoCostDisplay.textContent = `Cost: ${autoClickerCost}`;
-
-            // Disable buttons if you can't afford them
-            buyCursorBtn.disabled = score < cursorCost;
-            buyAutoBtn.disabled = score < autoClickerCost;
+        function saveGame() {
+            // Convert our object to a string and save it to browser storage
+            localStorage.setItem('myClickerSave', JSON.stringify(gameData));
+            
+            // Show a little "Saved" animation
+            saveStatus.textContent = "Game Saved!";
+            saveStatus.style.opacity = 1;
+            setTimeout(() => { saveStatus.style.opacity = 0.5; }, 1000);
         }
 
-        // Run once at start to set initial text
+        function loadGame() {
+            // Check if a save exists
+            const savedGame = JSON.parse(localStorage.getItem('myClickerSave'));
+            
+            if (savedGame) {
+                // If it exists, update our variables
+                gameData = savedGame;
+            }
+        }
+
+        function resetGame() {
+            // A popup to confirm they really want to delete
+            if (confirm("Are you sure you want to reset your progress? This cannot be undone.")) {
+                localStorage.removeItem('myClickerSave'); // Delete the save
+                location.reload(); // Refresh the page
+            }
+        }
+
+        // --- UPDATE UI ---
+        function updateUI() {
+            scoreDisplay.textContent = Math.floor(gameData.score); // floor removes decimals
+            perClickDisplay.textContent = `Per Click: ${gameData.clickPower}`;
+            perSecondDisplay.textContent = `Per Second: ${gameData.autoClickers}`;
+
+            cursorCostDisplay.textContent = `Cost: ${gameData.cursorCost}`;
+            autoCostDisplay.textContent = `Cost: ${gameData.autoClickerCost}`;
+
+            buyCursorBtn.disabled = gameData.score < gameData.cursorCost;
+            buyAutoBtn.disabled = gameData.score < gameData.autoClickerCost;
+        }
+
+        // --- INITIALIZATION ---
+        // When the page loads, try to load the save, then update the screen
+        loadGame();
         updateUI();
 
     </script>
