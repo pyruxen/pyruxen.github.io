@@ -3,598 +3,559 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Logic Grid Idle</title>
+    <title>Fishbone Factory Idle</title>
     <style>
         :root {
-            --bg-color: #181825;
-            --panel-bg: #313244;
-            --grid-bg: #1e1e2e;
-            --text-main: #cdd6f4;
-            --accent-gold: #f9e2af;
-            --accent-blue: #89b4fa;
-            --accent-red: #f38ba8;
-            --accent-green: #a6e3a1;
+            --bg-color: #1a1b26;
+            --panel-bg: #24283b;
+            --accent-gold: #e0af68;
+            --accent-blue: #7aa2f7;
+            --accent-red: #f7768e;
+            --accent-purple: #bb9af7;
+            --text-main: #c0caf5;
+            --slot-empty: #414868;
         }
 
         body {
-            font-family: 'Segoe UI', sans-serif;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             background-color: var(--bg-color);
             color: var(--text-main);
             margin: 0;
             display: flex;
+            flex-direction: column;
             height: 100vh;
             overflow: hidden;
-        }
-
-        /* SIDEBAR (SHOP & INFO) */
-        .sidebar {
-            width: 300px;
-            background-color: var(--panel-bg);
-            padding: 20px;
-            display: flex;
-            flex-direction: column;
-            box-shadow: 2px 0 10px rgba(0,0,0,0.3);
-            z-index: 10;
-        }
-
-        h1 { font-size: 1.5rem; margin-top: 0; color: var(--accent-gold); }
-        .score-box { font-size: 2.5rem; font-weight: bold; margin-bottom: 20px; }
-        .rate-box { font-size: 0.9rem; opacity: 0.7; margin-bottom: 20px; font-family: monospace; }
-
-        .btn {
-            background-color: #45475a;
-            color: white;
-            border: none;
-            padding: 12px;
-            margin-bottom: 10px;
-            border-radius: 6px;
-            cursor: pointer;
-            text-align: left;
-            transition: 0.2s;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        .btn:hover:not(:disabled) { background-color: #585b70; }
-        .btn:disabled { opacity: 0.5; cursor: not-allowed; }
-        .btn small { color: var(--accent-gold); }
-
-        .btn-tool {
-            text-align: center; 
-            justify-content: center; 
-            font-weight: bold;
-            border: 2px solid transparent;
-        }
-        .btn-tool.active { border-color: var(--accent-green); background-color: #384d48; }
-
-        .controls { margin-top: auto; display: flex; gap: 10px; }
-        .controls button { flex: 1; padding: 10px; background: #45475a; border: none; color: white; cursor: pointer; }
-
-        /* MAIN AREA */
-        .viewport {
-            flex: 1;
-            position: relative;
-            background-color: var(--grid-bg);
-            background-image: radial-gradient(#313244 1px, transparent 1px);
-            background-size: 20px 20px; /* Grid dots */
-            overflow: auto;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-        }
-
-        /* SVG LAYER (WIRES) */
-        #connections-layer {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            pointer-events: none; /* Let clicks pass through to cubes */
-            z-index: 1;
-        }
-
-        /* THE GRID ITEMS */
-        .grid-container {
-            display: grid;
-            grid-template-columns: repeat(6, 90px);
-            grid-template-rows: repeat(6, 90px);
-            gap: 20px;
-            position: relative;
-            z-index: 2;
-        }
-
-        .cell {
-            width: 90px;
-            height: 90px;
-            background-color: rgba(255,255,255,0.05);
-            border: 1px dashed rgba(255,255,255,0.1);
-            border-radius: 8px;
-            position: relative;
-        }
-
-        .cube {
-            width: 100%;
-            height: 100%;
-            border-radius: 8px;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            cursor: pointer;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.5);
-            transition: transform 0.1s;
-            position: relative;
             user-select: none;
         }
 
-        .cube:hover { transform: scale(1.05); z-index: 10; }
-        .cube:active { transform: scale(0.95); }
-
-        /* CUBE TYPES */
-        .cube.source { background: var(--accent-gold); color: #1e1e2e; border: 2px solid #fab387; }
-        .cube.adder { background: var(--accent-blue); color: #1e1e2e; border: 2px solid #74c7ec; }
-        .cube.mult { background: var(--accent-red); color: #1e1e2e; border: 2px solid #eba0ac; }
-
-        /* Badges */
-        .val { font-size: 1.5rem; font-weight: bold; }
-        .lbl { font-size: 0.7rem; text-transform: uppercase; margin-top: -5px; }
-        .lvl { 
-            position: absolute; top: 4px; right: 4px; 
-            background: rgba(0,0,0,0.3); color: white; 
-            font-size: 0.7rem; padding: 2px 4px; border-radius: 4px; 
+        /* --- HEADER --- */
+        header {
+            background-color: var(--panel-bg);
+            padding: 15px 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+            z-index: 10;
         }
+
+        .score-container { text-align: left; }
+        .score-val { font-size: 2.5rem; font-weight: bold; color: var(--accent-gold); line-height: 1; }
+        .score-rate { font-family: monospace; color: var(--accent-blue); font-size: 1rem; margin-top: 5px; }
+        
+        .controls button {
+            background: #565f89; border: none; padding: 8px 15px; 
+            color: white; border-radius: 4px; cursor: pointer; margin-left: 10px;
+        }
+        .controls button:hover { background: #7aa2f7; }
+
+        /* --- MAIN SCROLLABLE AREA --- */
+        .factory-viewport {
+            flex: 1;
+            overflow-x: auto; /* Allows horizontal scrolling */
+            overflow-y: hidden;
+            display: flex;
+            align-items: center;
+            /* We use row-reverse so Source is on the Right, and we expand Leftwards */
+            flex-direction: row-reverse; 
+            padding: 50px;
+            background-image: linear-gradient(var(--bg-color) 1px, transparent 1px), linear-gradient(90deg, var(--bg-color) 1px, transparent 1px);
+            background-size: 20px 20px;
+            background-color: #16161e;
+        }
+
+        /* --- THE COLUMNS --- */
+        .column {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin: 0 20px;
+            position: relative;
+            flex-shrink: 0; /* Prevents squishing */
+        }
+
+        /* Connector Lines */
+        .column:not(:first-child)::after {
+            content: "➜"; /* Arrow pointing right (towards source in row-reverse) */
+            position: absolute;
+            top: 135px; /* Aligns with bottom row */
+            right: -30px;
+            font-size: 2rem;
+            color: #565f89;
+            z-index: 0;
+        }
+
+        .branch-connector {
+            width: 4px;
+            height: 30px;
+            background-color: #565f89;
+            margin: 5px 0;
+            opacity: 0.3;
+        }
+        .branch-connector.active { opacity: 1; background-color: var(--accent-purple); }
+
+        /* --- SLOTS --- */
+        .slot {
+            width: 100px;
+            height: 100px;
+            background-color: var(--slot-empty);
+            border-radius: 12px;
+            border: 2px dashed #565f89;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+            transition: all 0.2s;
+        }
+
+        .slot.drag-over { background-color: #7aa2f7; border-color: white; transform: scale(1.1); }
+        .slot.is-branch { border-color: var(--accent-purple); opacity: 0.6; }
+        .slot.is-branch:hover { opacity: 1; }
+        
+        .slot-label {
+            position: absolute;
+            bottom: -25px;
+            font-size: 0.8rem;
+            color: #565f89;
+            text-transform: uppercase;
+            font-weight: bold;
+        }
+
+        /* --- CUBES --- */
+        .cube {
+            width: 90px;
+            height: 90px;
+            border-radius: 10px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.5);
+            font-weight: bold;
+            z-index: 2;
+            cursor: grab;
+            position: relative;
+        }
+        
+        .cube:active { cursor: grabbing; }
+
+        .cube.source { background: var(--accent-gold); color: #1a1b26; border: 2px solid #ff9e64; cursor: pointer; }
+        .cube.source:active { transform: scale(0.95); }
+
+        .cube.adder { background: var(--accent-blue); color: #1a1b26; border: 2px solid #7dcfff; }
+        .cube.mult { background: var(--accent-red); color: #1a1b26; border: 2px solid #ff9e64; }
+
+        .cube-val { font-size: 1.5rem; }
+        .cube-type { font-size: 0.7rem; text-transform: uppercase; opacity: 0.8; }
+        .cube-lvl { position: absolute; top: 4px; right: 4px; background: rgba(0,0,0,0.3); color: white; font-size: 0.6rem; padding: 2px 4px; border-radius: 4px; }
+
+        /* --- DRAG SHOP (BOTTOM DOCK) --- */
+        .shop-dock {
+            height: 160px;
+            background-color: var(--panel-bg);
+            border-top: 4px solid #16161e;
+            display: flex;
+            align-items: center;
+            padding: 0 40px;
+            gap: 40px;
+            box-shadow: 0 -5px 20px rgba(0,0,0,0.3);
+        }
+
+        .shop-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            cursor: grab;
+            transition: transform 0.2s;
+            position: relative;
+        }
+        .shop-item:hover { transform: translateY(-5px); }
+        .shop-item:active { cursor: grabbing; }
+
+        .shop-preview {
+            width: 70px;
+            height: 70px;
+            border-radius: 8px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin-bottom: 10px;
+            font-weight: bold;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+        }
+        
+        .cost-tag {
+            background-color: #16161e;
+            padding: 4px 8px;
+            border-radius: 4px;
+            color: var(--accent-gold);
+            font-weight: bold;
+            font-size: 0.9rem;
+        }
+        
+        .dock-separator { width: 1px; height: 60%; background: #565f89; }
+
+        .shop-btn {
+            background: #414868; color: white; border: none; padding: 10px 20px;
+            border-radius: 8px; cursor: pointer; font-size: 1rem;
+            display: flex; flex-direction: column; align-items: center;
+        }
+        .shop-btn:hover { background: #565f89; }
+        .shop-btn small { color: var(--accent-gold); margin-top: 5px; }
 
     </style>
 </head>
 <body>
 
-    <div class="sidebar">
-        <h1>Logic Grid</h1>
-        <div id="score" class="score-box">0</div>
-        <div id="rate" class="rate-box">Math: 1</div>
-
-        <h3>🛠️ Tools</h3>
-        <button id="tool-move" class="btn btn-tool active" onclick="setTool('move')">✋ Move / Merge</button>
-        <button id="tool-path" class="btn btn-tool" onclick="setTool('path')">🔗 Path Cable</button>
-        <button id="tool-delete" class="btn btn-tool" onclick="setTool('delete')">❌ Remove Cable</button>
-
-        <h3>🛒 Upgrades</h3>
-        <button class="btn" id="btn-upgrade-source" onclick="upgradeSource()">
-            <div>
-                <strong>Upgrade Source</strong><br>
-                <small>Base +1</small>
-            </div>
-            <span>$ <span id="cost-source">10</span></span>
-        </button>
-
-        <button class="btn" id="btn-buy-add" onclick="buyCube('adder')">
-            <div>
-                <strong>Buy Adder</strong><br>
-                <small>Adds value</small>
-            </div>
-            <span>$ <span id="cost-adder">25</span></span>
-        </button>
-
-        <button class="btn" id="btn-buy-mult" onclick="buyCube('mult')">
-            <div>
-                <strong>Buy Multiplier</strong><br>
-                <small>Multiplies result</small>
-            </div>
-            <span>$ <span id="cost-mult">100</span></span>
-        </button>
-
+    <header>
+        <div class="score-container">
+            <div id="score" class="score-val">0</div>
+            <div id="rate" class="score-rate">Per Click: 1</div>
+        </div>
         <div class="controls">
             <button onclick="saveGame()">Save</button>
             <button onclick="resetGame()">Reset</button>
         </div>
+    </header>
+
+    <div class="factory-viewport" id="chain-container">
+        </div>
+
+    <div class="shop-dock">
         
-        <p style="font-size: 0.8rem; color: #6c7086; margin-top: 20px;">
-            <strong>How to play:</strong><br>
-            1. Buy cubes.<br>
-            2. Use ✋ to drag cubes onto grid.<br>
-            3. Use 🔗 to click one cube then another to connect them.<br>
-            4. Connect chains INTO the source.<br>
-            5. Drag same cubes together to merge.
-        </p>
-    </div>
+        <div class="shop-item" draggable="true" ondragstart="dragStart(event, 'adder')">
+            <div class="shop-preview" style="background: var(--accent-blue); color: #1a1b26;">+</div>
+            <span class="cost-tag" id="cost-adder">$25</span>
+        </div>
 
-    <div class="viewport">
-        <svg id="connections-layer"></svg>
+        <div class="shop-item" draggable="true" ondragstart="dragStart(event, 'mult')">
+            <div class="shop-preview" style="background: var(--accent-red); color: #1a1b26;">x</div>
+            <span class="cost-tag" id="cost-mult">$100</span>
+        </div>
 
-        <div id="grid" class="grid-container">
-            </div>
+        <div class="dock-separator"></div>
+
+        <button class="shop-btn" onclick="buyExpansion()">
+            Extend Line
+            <small id="cost-expand">$50</small>
+        </button>
+
     </div>
 
     <script>
         // --- CONSTANTS ---
-        const GRID_SIZE = 6;
         const STATS = {
             adder: { base: 1, growth: 1 },
-            mult: { base: 1.2, growth: 0.2 }
+            mult: { base: 1.1, growth: 0.1 }
         };
 
-        // --- STATE ---
+        // --- GAME STATE ---
         let game = {
             score: 0,
-            sourceLvl: 1,
-            sourceCost: 10,
+            expandCost: 50,
             costs: { adder: 25, mult: 100 },
-            // Cells: Key "x,y" -> Object { type, level, id }
-            gridData: {}, 
-            // Connections: Array of { from: "x,y", to: "x,y" }
-            connections: []
+            
+            // The Chain is an array of Columns.
+            // Index 0 is the Source (Rightmost). Index 1 is the first machine, etc.
+            chain: [
+                { id: 'source', main: { type: 'source', level: 1 }, branch: null }
+            ]
         };
-        
-        // Runtime State
-        let currentTool = 'move'; // 'move', 'path', 'delete'
-        let pathStart = null;     // Stores the first click coordinate for path tool
 
-        // --- UI REFS ---
+        // --- UI REFERENCES ---
         const ui = {
-            grid: document.getElementById('grid'),
-            svg: document.getElementById('connections-layer'),
             score: document.getElementById('score'),
             rate: document.getElementById('rate'),
+            container: document.getElementById('chain-container'),
             costs: {
-                source: document.getElementById('cost-source'),
                 adder: document.getElementById('cost-adder'),
-                mult: document.getElementById('cost-mult')
+                mult: document.getElementById('cost-mult'),
+                expand: document.getElementById('cost-expand')
             }
         };
 
-        // --- INIT ---
-        function initGrid() {
-            ui.grid.innerHTML = '';
-            for(let y=0; y<GRID_SIZE; y++) {
-                for(let x=0; x<GRID_SIZE; x++) {
-                    let cell = document.createElement('div');
-                    cell.className = 'cell';
-                    cell.dataset.x = x;
-                    cell.dataset.y = y;
-                    
-                    // Events
-                    cell.addEventListener('click', () => handleCellClick(x, y));
-                    cell.addEventListener('dragover', (e) => e.preventDefault()); // Allow drop
-                    cell.addEventListener('drop', (e) => handleDrop(e, x, y));
+        // --- CORE LOGIC ---
 
-                    ui.grid.appendChild(cell);
+        function calculateChain() {
+            // Start with Source Base Value
+            let totalPerClick = game.chain[0].main.level; // Source Level = Base Value
+            
+            // Iterate backwards from the end of the array (Leftmost items) towards 0 (Source)
+            // Or forwards? In logic: Slot 2 feeds Slot 1 feeds Source.
+            // We apply math sequentially.
+            
+            // Let's model it: Flow Value accumulates as we walk towards Source.
+            // But usually in these games, modifiers act on the Source's base.
+            // Let's try: Source generates X. Slot 1 modifies X. Slot 2 modifies result.
+            // Wait, the visual flow is Left -> Right -> Source.
+            // So Slot N (Far Left) starts the chain? Or does Source pull?
+            
+            // Let's do "Pull" logic.
+            // Source produces Base.
+            // Slot 1 (closest) modifies that.
+            // Slot 2 modifies that result.
+            
+            for (let i = 1; i < game.chain.length; i++) {
+                const col = game.chain[i];
+                if (!col.main) continue; // Empty slot, ignore
+
+                // 1. Calculate the power of this Main Node
+                let nodePower = 0; 
+                let nodeIsMult = false;
+
+                if (col.main.type === 'adder') {
+                    nodePower = STATS.adder.base + (STATS.adder.growth * (col.main.level - 1));
+                    nodeIsMult = false;
+                } else if (col.main.type === 'mult') {
+                    nodePower = STATS.mult.base + (STATS.mult.growth * (col.main.level - 1));
+                    nodeIsMult = true;
                 }
-            }
-            
-            // Ensure source exists
-            if (!game.gridData["3,3"]) {
-                game.gridData["3,3"] = { type: 'source', level: 1, id: 'src' };
-            }
-            
-            render();
-        }
 
-        // --- MATH ENGINE ---
-
-        // Recursive function to calculate value flowing INTO a specific node
-        function calculateNodeInput(targetKey, visited = []) {
-            // Avoid infinite loops
-            if(visited.includes(targetKey)) return 0;
-
-            // Find all connections pointing TO this target
-            const incoming = game.connections.filter(c => c.to === targetKey);
-            
-            if (incoming.length === 0) return 0; // Dead end of chain
-
-            let totalInput = 0;
-
-            incoming.forEach(conn => {
-                const sourceKey = conn.from;
-                const sourceCube = game.gridData[sourceKey];
-                
-                if (!sourceCube) return; // Should not happen
-
-                // Get the value flowing into the SOURCE cube (recursive)
-                let valueIntoSource = calculateNodeInput(sourceKey, [...visited, targetKey]);
-
-                // Apply the source cube's logic
-                if (sourceCube.type === 'adder') {
-                    let power = STATS.adder.base + (STATS.adder.growth * (sourceCube.level - 1));
-                    // Adders add their power to whatever flowed into them, or just generate power if at start
-                    totalInput += (valueIntoSource + power);
-                } 
-                else if (sourceCube.type === 'mult') {
-                    let power = STATS.mult.base + (STATS.mult.growth * (sourceCube.level - 1));
-                    // Multipliers multiply the flow. If 0 flow, they do nothing (or we can say they start with 1)
-                    let baseFlow = (valueIntoSource === 0) ? 1 : valueIntoSource;
-                    totalInput += (baseFlow * power);
+                // 2. Check for Branch (Modifier)
+                if (col.branch) {
+                    let branchPower = 0;
+                    // Branch logic: Modifies the Node Power
+                    if (col.branch.type === 'adder') {
+                        branchPower = STATS.adder.base + (STATS.adder.growth * (col.branch.level - 1));
+                        nodePower += branchPower; // Add to the main node's power
+                    } else if (col.branch.type === 'mult') {
+                        branchPower = STATS.mult.base + (STATS.mult.growth * (col.branch.level - 1));
+                        nodePower *= branchPower; // Multiply the main node's power
+                    }
                 }
-            });
 
-            return totalInput;
-        }
-
-        function calculateTotal() {
-            // Find Source Location
-            const sourceKey = Object.keys(game.gridData).find(k => game.gridData[k].type === 'source');
-            if(!sourceKey) return 0;
-
-            let incomingValue = calculateNodeInput(sourceKey);
-            
-            // Final calculation: Source Base + Incoming Chain Value
-            return game.sourceLvl + incomingValue;
-        }
-
-        // --- INTERACTION ---
-
-        function setTool(tool) {
-            currentTool = tool;
-            pathStart = null; // reset temp path
-            
-            // Update UI buttons
-            document.querySelectorAll('.btn-tool').forEach(b => b.classList.remove('active'));
-            document.getElementById(`tool-${tool}`).classList.add('active');
-            
-            render(); // To clear highlights
-        }
-
-        function handleCellClick(x, y) {
-            const key = `${x},${y}`;
-            const cube = game.gridData[key];
-
-            if (currentTool === 'path') {
-                if (!cube) return; // Can't start path on empty air
-
-                if (!pathStart) {
-                    // Start Drawing
-                    pathStart = key;
-                    render(); // Highlight start
+                // 3. Apply Main Node to Total Flow
+                if (nodeIsMult) {
+                    totalPerClick *= nodePower;
                 } else {
-                    // Finish Drawing
-                    if (pathStart !== key) {
-                        // Prevent duplicates
-                        const exists = game.connections.find(c => c.from === pathStart && c.to === key);
-                        const reverse = game.connections.find(c => c.from === key && c.to === pathStart);
-                        
-                        if (!exists && !reverse) {
-                            game.connections.push({ from: pathStart, to: key });
-                        }
-                    }
-                    pathStart = null;
-                    render();
+                    totalPerClick += nodePower;
                 }
             }
-            else if (currentTool === 'delete') {
-                // Remove any connection attached to this cell?
-                // Or maybe click the line? (Harder). Let's just clear connections TO or FROM this cell
-                // Simple version: Clear all links touching this cell
-                game.connections = game.connections.filter(c => c.from !== key && c.to !== key);
-                render();
-            }
-            else if (currentTool === 'move') {
-                // Click Source to Gain Points
-                if (cube && cube.type === 'source') {
-                    let val = calculateTotal();
-                    game.score += val;
-                    // Pop animation
-                    const el = document.querySelector(`.cube[data-key="${key}"]`);
-                    if(el) {
-                        el.style.transform = "scale(0.9)";
-                        setTimeout(()=>el.style.transform = "scale(1)", 100);
-                    }
-                    updateUI();
-                }
-            }
+
+            return totalPerClick;
         }
 
-        // --- DRAG AND DROP (MERGE & MOVE) ---
-        function handleDragStart(e, x, y) {
-            if (currentTool !== 'move') {
-                e.preventDefault(); 
-                return;
-            }
-            e.dataTransfer.setData("text/plain", `${x},${y}`);
-        }
-
-        function handleDrop(e, tx, ty) {
-            if (currentTool !== 'move') return;
-            e.preventDefault();
+        function clickSource() {
+            const val = calculateChain();
+            game.score += val;
             
-            const fromData = e.dataTransfer.getData("text/plain").split(',');
-            const fx = parseInt(fromData[0]);
-            const fy = parseInt(fromData[1]);
-            
-            const fromKey = `${fx},${fy}`;
-            const toKey = `${tx},${ty}`;
-
-            if (fromKey === toKey) return;
-
-            const fromCube = game.gridData[fromKey];
-            const toCube = game.gridData[toKey];
-
-            if (!fromCube) return;
-            if (fromCube.type === 'source') return; // Cannot move source (optional rule)
-
-            // LOGIC:
-            if (!toCube) {
-                // Move to empty
-                game.gridData[toKey] = fromCube;
-                delete game.gridData[fromKey];
-                
-                // Update connections to follow the move
-                game.connections.forEach(c => {
-                    if(c.from === fromKey) c.from = toKey;
-                    if(c.to === fromKey) c.to = toKey;
-                });
-            } else if (toCube.type === fromCube.type && toCube.level === fromCube.level) {
-                // Merge
-                game.gridData[toKey].level++;
-                delete game.gridData[fromKey];
-                // Remove broken connections from the old cube
-                game.connections = game.connections.filter(c => c.from !== fromKey && c.to !== fromKey);
-            } else {
-                // Swap (Optional, skipped for simplicity here)
-                // If you want swap, you need temp var
+            // Animation on Source
+            const srcBtn = document.querySelector('.cube.source');
+            if(srcBtn) {
+                srcBtn.style.transform = "scale(0.9)";
+                setTimeout(() => srcBtn.style.transform = "scale(1)", 100);
             }
-
-            render();
             updateUI();
         }
 
-        // --- SHOP ---
-        function upgradeSource() {
-            if(game.score >= game.sourceCost) {
-                game.score -= game.sourceCost;
-                game.sourceLvl++;
-                game.sourceCost = Math.floor(game.sourceCost * 1.5);
+        // --- SHOP & EXPANSION ---
+
+        function buyExpansion() {
+            if (game.score >= game.expandCost) {
+                game.score -= game.expandCost;
+                game.expandCost = Math.floor(game.expandCost * 1.5);
+                
+                // Add new empty column
+                game.chain.push({ main: null, branch: null });
+                
+                renderChain();
                 updateUI();
-                render();
             }
         }
 
-        function buyCube(type) {
+        function handlePurchase(type, colIndex, isBranch) {
             const cost = game.costs[type];
-            if(game.score < cost) return;
+            if (game.score < cost) return false;
 
-            // Find empty spot
-            let placed = false;
-            for(let y=0; y<GRID_SIZE; y++) {
-                if(placed) break;
-                for(let x=0; x<GRID_SIZE; x++) {
-                    if(!game.gridData[`${x},${y}`]) {
-                        game.score -= cost;
-                        game.gridData[`${x},${y}`] = { type: type, level: 1, id: Date.now() };
-                        // Increase cost
-                        game.costs[type] = Math.ceil(game.costs[type] * 1.3);
-                        placed = true;
-                        break;
+            // Deduct Cost
+            game.score -= cost;
+            game.costs[type] = Math.ceil(game.costs[type] * 1.3);
+
+            // Create Cube
+            const newCube = { type: type, level: 1 };
+            
+            if (isBranch) {
+                game.chain[colIndex].branch = newCube;
+            } else {
+                game.chain[colIndex].main = newCube;
+            }
+
+            updateUI();
+            renderChain();
+            return true;
+        }
+
+        // --- DRAG AND DROP HANDLERS ---
+        
+        function dragStart(ev, type) {
+            ev.dataTransfer.setData("type", type);
+            ev.dataTransfer.effectAllowed = "copy";
+        }
+
+        function allowDrop(ev) {
+            ev.preventDefault();
+            // Optional: highlight slot
+            ev.target.closest('.slot').classList.add('drag-over');
+        }
+        
+        function dragLeave(ev) {
+            ev.target.closest('.slot').classList.remove('drag-over');
+        }
+
+        function drop(ev, colIndex, isBranch) {
+            ev.preventDefault();
+            ev.target.closest('.slot').classList.remove('drag-over');
+            
+            const type = ev.dataTransfer.getData("type");
+            const targetCol = game.chain[colIndex];
+            
+            const existing = isBranch ? targetCol.branch : targetCol.main;
+
+            if (!existing) {
+                // Buy New
+                handlePurchase(type, colIndex, isBranch);
+            } else {
+                // Merge logic (if dragging same type)
+                // NOTE: This basic drag only supports Shop -> Grid. 
+                // To support Grid -> Grid merge, we need more complex dataTransfer.
+                // For now, if slot is full, do nothing (or we could implement Upgrade-by-Buying).
+                
+                if (existing.type === type) {
+                    const cost = game.costs[type];
+                    if (game.score >= cost) {
+                         // Upgrade existing by paying cost
+                         game.score -= cost;
+                         game.costs[type] = Math.ceil(game.costs[type] * 1.3);
+                         existing.level++;
+                         updateUI();
+                         renderChain();
                     }
                 }
             }
-            if(!placed) alert("Grid full!");
-            else {
-                updateUI();
-                render();
-            }
         }
 
-        // --- RENDERERS ---
-        function render() {
-            // 1. Render Cubes
-            // We iterate DOM cells and fill them based on data
-            const cells = document.querySelectorAll('.cell');
-            cells.forEach(cell => {
-                const x = cell.dataset.x;
-                const y = cell.dataset.y;
-                const key = `${x},${y}`;
-                const data = game.gridData[key];
+        // --- RENDER ---
 
-                cell.innerHTML = ''; // clear
+        function renderChain() {
+            ui.container.innerHTML = '';
 
-                if (data) {
-                    const cube = document.createElement('div');
-                    cube.className = `cube ${data.type}`;
-                    cube.draggable = true;
-                    cube.dataset.key = key;
+            game.chain.forEach((col, index) => {
+                const columnDiv = document.createElement('div');
+                columnDiv.className = 'column';
+
+                // 1. Branch Slot (Top)
+                const branchSlot = document.createElement('div');
+                branchSlot.className = 'slot is-branch';
+                if (index === 0) branchSlot.style.visibility = 'hidden'; // Source has no branch in this simple model
+                
+                if (index !== 0) {
+                    branchSlot.ondragover = allowDrop;
+                    branchSlot.ondragleave = dragLeave;
+                    branchSlot.ondrop = (e) => drop(e, index, true);
                     
-                    // Highlight if path start
-                    if (pathStart === key) cube.style.border = "2px dashed white";
-
-                    // Drag Events
-                    cube.addEventListener('dragstart', (e) => handleDragStart(e, x, y));
-
-                    // Text
-                    let txt = "";
-                    if(data.type === 'source') txt = `⚡${game.sourceLvl}`;
-                    if(data.type === 'adder') txt = `+${STATS.adder.base + (STATS.adder.growth*(data.level-1))}`;
-                    if(data.type === 'mult') txt = `x${(STATS.mult.base + (STATS.mult.growth*(data.level-1))).toFixed(1)}`;
-                    
-                    cube.innerHTML = `<span class="lvl">${data.level}</span><span class="val">${txt}</span><span class="lbl">${data.type}</span>`;
-                    cell.appendChild(cube);
+                    if (col.branch) {
+                        branchSlot.appendChild(createCubeEl(col.branch));
+                        branchSlot.style.borderStyle = "solid";
+                    } else {
+                         branchSlot.innerHTML = `<span class="slot-label">Branch</span>`;
+                    }
                 }
-            });
 
-            // 2. Render Lines (SVG)
-            drawConnections();
-            
-            // 3. Update Rates
-            updateUI();
+                // 2. Connector Line
+                const connector = document.createElement('div');
+                connector.className = 'branch-connector ' + (col.branch ? 'active' : '');
+
+                // 3. Main Slot (Bottom)
+                const mainSlot = document.createElement('div');
+                mainSlot.className = 'slot';
+                
+                if (index === 0) {
+                    // Source
+                    const srcCube = createCubeEl(col.main);
+                    srcCube.onclick = clickSource;
+                    mainSlot.appendChild(srcCube);
+                    mainSlot.style.border = "none";
+                    mainSlot.style.background = "transparent";
+                } else {
+                    mainSlot.ondragover = allowDrop;
+                    mainSlot.ondragleave = dragLeave;
+                    mainSlot.ondrop = (e) => drop(e, index, false);
+
+                    if (col.main) {
+                        mainSlot.appendChild(createCubeEl(col.main));
+                        mainSlot.style.borderStyle = "solid";
+                    } else {
+                        mainSlot.innerHTML = `<span class="slot-label">Main</span>`;
+                    }
+                }
+
+                columnDiv.appendChild(branchSlot);
+                columnDiv.appendChild(connector);
+                columnDiv.appendChild(mainSlot);
+
+                ui.container.appendChild(columnDiv);
+            });
         }
 
-        function drawConnections() {
-            ui.svg.innerHTML = '';
+        function createCubeEl(data) {
+            const div = document.createElement('div');
+            div.className = `cube ${data.type}`;
             
-            // Helper to get center of a cell
-            const getCenter = (key) => {
-                const parts = key.split(',');
-                // Find the cell DOM element
-                const cell = document.querySelector(`.cell[data-x="${parts[0]}"][data-y="${parts[1]}"]`);
-                if (!cell) return {x:0, y:0};
-                
-                // We need coordinates relative to the svg container
-                // But the SVG fills the viewport, so offsetLeft/Top of cell vs viewport
-                const rect = cell.getBoundingClientRect();
-                const viewRect = document.querySelector('.viewport').getBoundingClientRect();
-                
-                return {
-                    x: (rect.left - viewRect.left) + rect.width/2 + document.querySelector('.viewport').scrollLeft,
-                    y: (rect.top - viewRect.top) + rect.height/2 + document.querySelector('.viewport').scrollTop
-                };
-            };
-
-            game.connections.forEach(conn => {
-                const p1 = getCenter(conn.from);
-                const p2 = getCenter(conn.to);
-
-                const line = document.createElementNS('http://www.w3.org/2000/svg','line');
-                line.setAttribute('x1', p1.x);
-                line.setAttribute('y1', p1.y);
-                line.setAttribute('x2', p2.x);
-                line.setAttribute('y2', p2.y);
-                line.setAttribute('stroke', '#585b70');
-                line.setAttribute('stroke-width', '4');
-                line.setAttribute('marker-end', 'url(#arrow)'); // We need to define marker
-                ui.svg.appendChild(line);
-            });
+            let symbol = "";
+            let val = 0;
             
-            // Add Arrow Marker def
-            if(!document.getElementById('arrow')) {
-                const defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
-                defs.innerHTML = `<marker id="arrow" markerWidth="10" markerHeight="10" refX="20" refY="3" orient="auto" markerUnits="strokeWidth"><path d="M0,0 L0,6 L9,3 z" fill="#585b70" /></marker>`;
-                ui.svg.appendChild(defs);
+            if (data.type === 'source') {
+                symbol = "⚡";
+                val = data.level;
+            } else if (data.type === 'adder') {
+                symbol = "+";
+                val = STATS.adder.base + (STATS.adder.growth * (data.level - 1));
+            } else if (data.type === 'mult') {
+                symbol = "x";
+                val = (STATS.mult.base + (STATS.mult.growth * (data.level - 1))).toFixed(1);
             }
+
+            div.innerHTML = `
+                <span class="cube-lvl">Lv${data.level}</span>
+                <span class="cube-val">${val}</span>
+                <span class="cube-type">${symbol}</span>
+            `;
+            return div;
         }
 
         function updateUI() {
             ui.score.textContent = Math.floor(game.score);
-            ui.costs.source.textContent = game.sourceCost;
-            ui.costs.adder.textContent = game.costs.adder;
-            ui.costs.mult.textContent = game.costs.mult;
-            ui.rate.textContent = `Current Click Value: ${calculateTotal().toFixed(1)}`;
+            ui.rate.textContent = `Yield: ${calculateChain().toFixed(1)}`;
+            
+            ui.costs.adder.textContent = `$${game.costs.adder}`;
+            ui.costs.mult.textContent = `$${game.costs.mult}`;
+            ui.costs.expand.textContent = `$${game.expandCost}`;
         }
 
         // --- SAVE SYSTEM ---
         function saveGame() {
-            localStorage.setItem('LogicGridSave', JSON.stringify(game));
-            alert("Saved!");
+            localStorage.setItem('FishboneSave', JSON.stringify(game));
+            alert("Game Saved");
         }
-        function loadGame() {
-            const d = localStorage.getItem('LogicGridSave');
-            if(d) {
-                game = JSON.parse(d);
-                // Fix missing source if older save
-                if(!game.gridData) game.gridData = {};
-            }
-            initGrid();
-        }
+        
         function resetGame() {
-            if(confirm("Wipe Save?")) {
-                localStorage.removeItem('LogicGridSave');
+            if(confirm("Reset?")) {
+                localStorage.removeItem('FishboneSave');
                 location.reload();
             }
         }
+        
+        function loadGame() {
+            const d = localStorage.getItem('FishboneSave');
+            if (d) {
+                game = JSON.parse(d);
+            }
+            renderChain();
+            updateUI();
+        }
 
-        // Boot
+        // Init
         loadGame();
-
-        // Redraw lines on resize
-        window.addEventListener('resize', drawConnections);
 
     </script>
 </body>
