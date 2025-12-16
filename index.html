@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Fishbone Factory V2</title>
+    <title>Fishbone Factory V3</title>
     <style>
         :root {
             --bg-color: #1a1b26;
@@ -14,6 +14,7 @@
             --accent-blue: #7aa2f7;
             --accent-red: #f7768e;
             --accent-gold: #e0af68;
+            --accent-purple: #bb9af7;
         }
 
         body {
@@ -27,182 +28,210 @@
             height: 100vh;
         }
 
-        /* --- UI OVERLAYS --- */
-        .ui-layer {
-            position: absolute;
-            top: 0; left: 0; width: 100%;
-            pointer-events: none;
-            z-index: 100;
-            padding: 20px;
+        /* --- HUD --- */
+        .hud-top {
+            position: absolute; top: 0; left: 0; width: 100%;
+            padding: 15px;
             box-sizing: border-box;
             display: flex;
             justify-content: space-between;
+            pointer-events: none; /* Let clicks pass through */
+            z-index: 50;
         }
 
-        .hud-box {
-            background: rgba(26, 27, 38, 0.95);
-            padding: 15px 25px;
-            border-radius: 12px;
+        .hud-left { pointer-events: auto; display: flex; gap: 10px; }
+        .hud-right { pointer-events: auto; }
+
+        .score-box {
+            background: rgba(26, 27, 38, 0.9);
+            padding: 10px 20px;
+            border-radius: 8px;
             border: 1px solid #414868;
-            pointer-events: auto;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
-            min-width: 200px;
+            text-align: right;
+        }
+        .score-val { font-size: 2rem; font-weight: bold; color: var(--accent-gold); line-height: 1; }
+        .rate-val { font-family: monospace; color: #7aa2f7; font-size: 0.9rem; }
+
+        /* --- BUTTONS --- */
+        .icon-btn {
+            width: 50px; height: 50px;
+            background: #24283b;
+            border: 2px solid #414868;
+            border-radius: 8px;
+            color: white; font-size: 1.5rem;
+            cursor: pointer; display: flex; justify-content: center; align-items: center;
+            transition: 0.2s;
+        }
+        .icon-btn:hover { background: #414868; }
+
+        /* Boost Button */
+        #boost-btn {
+            width: auto; padding: 0 15px;
+            background: #1a1b26;
+            border-color: var(--accent-purple);
+            color: var(--accent-purple);
+            font-weight: bold; font-size: 1rem;
+            position: relative; overflow: hidden;
+        }
+        #boost-btn.active { background: var(--accent-purple); color: #1a1b26; box-shadow: 0 0 15px var(--accent-purple); }
+        #boost-btn:disabled { opacity: 0.7; cursor: not-allowed; border-color: #565f89; color: #565f89; background: #1a1b26; box-shadow: none; }
+        
+        .boost-fill {
+            position: absolute; bottom: 0; left: 0; height: 3px; background: var(--accent-purple);
+            width: 0%; transition: width 1s linear;
         }
 
-        .score-val { font-size: 2.2rem; font-weight: bold; color: var(--accent-gold); line-height: 1; }
-        .rate-val { font-family: monospace; color: #7aa2f7; font-size: 0.9rem; margin-top: 5px; }
-
-        .controls button {
-            background: #414868; border: none; padding: 8px 16px; 
-            color: white; border-radius: 6px; cursor: pointer; margin-left: 5px;
-            transition: background 0.2s;
+        /* --- MENU OVERLAY --- */
+        .menu-overlay {
+            position: absolute; top: 0; left: 0; height: 100vh; width: 350px;
+            background: #16161e;
+            border-right: 1px solid #414868;
+            transform: translateX(-100%);
+            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            z-index: 200;
+            display: flex; flex-direction: column;
+            box-shadow: 5px 0 30px rgba(0,0,0,0.5);
         }
-        .controls button:hover { background: #565f89; }
+        .menu-overlay.open { transform: translateX(0); }
 
-        /* --- THE CANVAS --- */
+        .menu-header {
+            padding: 20px; border-bottom: 1px solid #414868;
+            display: flex; justify-content: space-between; align-items: center;
+        }
+        .menu-content { padding: 20px; overflow-y: auto; flex: 1; }
+
+        .eq-box {
+            background: #0f0f14; padding: 15px; border-radius: 8px;
+            font-family: monospace; color: var(--accent-green); font-size: 0.85rem;
+            white-space: pre-wrap; word-break: break-all;
+            margin-bottom: 20px; border: 1px dashed #414868;
+        }
+
+        .menu-section { margin-bottom: 30px; }
+        .menu-label { text-transform: uppercase; font-size: 0.75rem; color: #565f89; margin-bottom: 10px; font-weight: bold; }
+
+        .full-btn {
+            width: 100%; padding: 12px; margin-bottom: 10px;
+            background: #24283b; border: 1px solid #414868; color: var(--text);
+            border-radius: 6px; cursor: pointer; text-align: left;
+            display: flex; justify-content: space-between;
+        }
+        .full-btn:hover { background: #414868; }
+        .full-btn span { color: var(--accent-gold); }
+
+        /* --- VIEWPORT --- */
         .viewport {
-            flex: 1;
-            overflow: scroll;
-            position: relative;
-            cursor: grab;
-            background-image: 
-                linear-gradient(var(--grid-line) 1px, transparent 1px), 
-                linear-gradient(90deg, var(--grid-line) 1px, transparent 1px);
+            flex: 1; overflow: scroll; position: relative; cursor: grab;
+            background-image: linear-gradient(var(--grid-line) 1px, transparent 1px), linear-gradient(90deg, var(--grid-line) 1px, transparent 1px);
             background-size: 50px 50px;
         }
-        
         .viewport:active { cursor: grabbing; }
+        .world-container { position: relative; width: 8000px; height: 4000px; }
 
-        .world-container {
-            position: relative;
-            width: 8000px;
-            height: 4000px;
-        }
-
-        /* --- GRID ITEMS --- */
-        .node-wrapper {
-            position: absolute;
-            width: 100px;
-            height: 100px;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            transition: transform 0.2s;
-        }
-
+        /* --- NODES --- */
+        .node-wrapper { position: absolute; width: 100px; height: 100px; display: flex; justify-content: center; align-items: center; }
+        
         .slot {
-            width: 90px;
-            height: 90px;
-            background: var(--slot-bg);
-            border: 2px solid #414868;
-            border-radius: 12px;
-            position: relative;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            transition: all 0.2s;
+            width: 90px; height: 90px; background: var(--slot-bg);
+            border: 2px solid #414868; border-radius: 12px; position: relative;
+            display: flex; justify-content: center; align-items: center; transition: 0.2s;
         }
-
         .slot.drag-target { border-color: var(--accent-blue); box-shadow: 0 0 15px var(--accent-blue); transform: scale(1.05); }
 
-        /* Arrows */
-        .arrow-right::after {
-            content: "➜"; position: absolute; right: -28px; 
-            color: #414868; font-size: 2rem; z-index: 0;
-        }
-        .arrow-down::after {
-            content: "⬇"; position: absolute; bottom: -28px; 
-            color: #414868; font-size: 2rem; z-index: 0;
-        }
+        .arrow-right::after { content: "➜"; position: absolute; right: -28px; color: #414868; font-size: 2rem; z-index: 0; }
+        .arrow-down::after { content: "⬇"; position: absolute; bottom: -28px; color: #414868; font-size: 2rem; z-index: 0; }
 
-        /* Expand Button (+) */
         .expand-btn {
-            width: 36px; height: 36px;
-            background: #24283b;
-            border: 2px dashed var(--accent-green);
-            border-radius: 50%;
-            color: var(--accent-green);
-            font-size: 1.5rem;
-            display: flex; justify-content: center; align-items: center;
-            cursor: pointer;
-            transition: all 0.2s;
-            position: absolute;
-            z-index: 5;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+            width: 36px; height: 36px; background: #24283b;
+            border: 2px dashed var(--accent-green); border-radius: 50%;
+            color: var(--accent-green); font-size: 1.5rem; display: flex; justify-content: center; align-items: center;
+            cursor: pointer; position: absolute; z-index: 5; box-shadow: 0 4px 10px rgba(0,0,0,0.3);
         }
         .expand-btn:hover { background: var(--accent-green); color: #1a1b26; transform: scale(1.1); }
-        
-        .expand-cost { 
-            position: absolute; top: -25px; 
-            font-size: 0.75rem; color: #1a1b26; font-weight: bold; 
-            background: var(--accent-green); padding: 2px 6px; border-radius: 4px;
-            white-space: nowrap;
-        }
+        .expand-cost { position: absolute; top: -25px; font-size: 0.75rem; color: #1a1b26; background: var(--accent-green); padding: 2px 6px; border-radius: 4px; white-space: nowrap; font-weight: bold;}
 
         /* --- CUBES --- */
         .cube {
-            width: 82px; height: 82px;
-            border-radius: 8px;
-            display: flex; flex-direction: column; 
-            justify-content: center; align-items: center;
-            font-weight: bold;
-            box-shadow: 0 5px 10px rgba(0,0,0,0.4);
-            cursor: grab; z-index: 2;
+            width: 82px; height: 82px; border-radius: 8px;
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+            font-weight: bold; box-shadow: 0 5px 10px rgba(0,0,0,0.4); cursor: grab; z-index: 2;
         }
-        .cube:active { cursor: grabbing; }
-
         .cube.source { background: var(--accent-gold); color: #1a1b26; border: 2px solid #ff9e64; cursor: pointer; }
         .cube.source:active { transform: scale(0.95); }
         .cube.adder { background: var(--accent-blue); color: #1a1b26; border: 2px solid #7dcfff; }
         .cube.mult { background: var(--accent-red); color: #1a1b26; border: 2px solid #ff9e64; }
-
         .cube-main-val { font-size: 1.4rem; }
         .cube-sub { font-size: 0.7rem; opacity: 0.8; text-transform: uppercase; }
 
-        /* --- BOTTOM DOCK --- */
+        /* --- DOCK --- */
         .shop-dock {
-            position: absolute; bottom: 0; left: 0; width: 100%;
-            height: 130px;
-            background: #16161e;
-            border-top: 1px solid #414868;
-            display: flex; justify-content: center; align-items: center; gap: 30px;
-            z-index: 100;
+            position: absolute; bottom: 0; left: 0; width: 100%; height: 130px;
+            background: #16161e; border-top: 1px solid #414868;
+            display: flex; justify-content: center; align-items: center; gap: 30px; z-index: 100;
             box-shadow: 0 -5px 25px rgba(0,0,0,0.6);
         }
-
-        .shop-item {
-            display: flex; flex-direction: column; align-items: center;
-            cursor: grab; transition: transform 0.1s;
-        }
+        .shop-item { display: flex; flex-direction: column; align-items: center; cursor: grab; transition: transform 0.1s; }
         .shop-item:hover { transform: translateY(-5px); }
-        
         .shop-icon {
-            width: 60px; height: 60px; border-radius: 8px;
-            display: flex; justify-content: center; align-items: center;
-            font-weight: bold; color: #1a1b26; font-size: 1.5rem;
-            margin-bottom: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+            width: 60px; height: 60px; border-radius: 8px; display: flex; justify-content: center; align-items: center;
+            font-weight: bold; color: #1a1b26; font-size: 1.5rem; margin-bottom: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.3);
         }
-
         .cost-pill { background: #24283b; color: var(--accent-gold); padding: 4px 10px; border-radius: 12px; font-size: 0.85rem; font-weight: bold; border: 1px solid #414868; }
 
     </style>
 </head>
 <body>
 
-    <div class="ui-layer">
-        <div class="hud-box">
-            <div id="score" class="score-val">0</div>
-            <div id="rate" class="rate-val">Yield: 1</div>
+    <div class="hud-top">
+        <div class="hud-left">
+            <button class="icon-btn" onclick="toggleMenu()">☰</button>
+            <button id="boost-btn" class="icon-btn" onclick="activateBoost()">
+                🚀 BOOST
+                <div class="boost-fill" id="boost-bar"></div>
+            </button>
         </div>
-        <div class="hud-box controls">
-            <button onclick="saveGame()">Save</button>
-            <button onclick="resetGame()">Reset</button>
+        <div class="hud-right">
+            <div class="score-box">
+                <div id="score" class="score-val">0</div>
+                <div id="rate" class="rate-val">Yield: 1</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="menu-overlay" id="menu">
+        <div class="menu-header">
+            <h3>Factory OS</h3>
+            <button class="icon-btn" style="width: 30px; height: 30px; font-size: 1rem;" onclick="toggleMenu()">✕</button>
+        </div>
+        <div class="menu-content">
+            <div class="menu-section">
+                <div class="menu-label">Equation Logic</div>
+                <div class="eq-box" id="equation-text">
+                    (Source)
+                </div>
+            </div>
+
+            <div class="menu-section">
+                <div class="menu-label">Upgrades</div>
+                <button class="full-btn" onclick="upgradeAutoRate()">
+                    <div>
+                        <strong>Auto-Clicker</strong><br>
+                        <small id="auto-rate-desc">Rate: 0.5/s</small>
+                    </div>
+                    <span id="auto-rate-cost">$500</span>
+                </button>
+            </div>
+
+            <div class="menu-section">
+                <div class="menu-label">System</div>
+                <button class="full-btn" onclick="saveGame()">Save Game</button>
+                <button class="full-btn" style="border-color: #f7768e; color: #f7768e;" onclick="resetGame()">Reset Factory</button>
+            </div>
         </div>
     </div>
 
     <div class="viewport" id="viewport">
-        <div class="world-container" id="world">
-            </div>
+        <div class="world-container" id="world"></div>
     </div>
 
     <div class="shop-dock">
@@ -217,12 +246,13 @@
     </div>
 
     <script>
-        // --- CONFIG ---
+        // --- CONSTANTS ---
         const CELL_SIZE = 120; 
         const CENTER_X = 4000; 
         const CENTER_Y = 2000; 
+        const BOOST_DURATION = 30000; // 30 seconds
+        const BOOST_COOLDOWN = 1800000; // 30 mins
         
-        // Stats: Base value + (Growth * (Level-1))
         const STATS = {
             adder: { base: 1, growth: 1 },
             mult: { base: 1.1, growth: 0.1 }
@@ -233,11 +263,20 @@
             score: 0,
             costs: { adder: 25, mult: 100 },
             
-            // Grid System: Key "x,y" (x is negative left, y is positive up)
+            // Auto Clicker
+            autoRate: 0.5, // Clicks per second (0.5 = 1 click per 2s)
+            autoCost: 500,
+
+            // Boost
+            lastBoost: 0, // Timestamp
+
             grid: {
                 "0,0": { unlocked: true, cube: { type: 'source', level: 1 } }
             }
         };
+
+        let boostActive = false;
+        let clickAccumulator = 0; // For handling fractional auto-clicks
 
         // --- UI REFS ---
         const ui = {
@@ -245,56 +284,73 @@
             viewport: document.getElementById('viewport'),
             score: document.getElementById('score'),
             rate: document.getElementById('rate'),
+            eqText: document.getElementById('equation-text'),
+            boostBtn: document.getElementById('boost-btn'),
+            menu: document.getElementById('menu'),
+            autoDesc: document.getElementById('auto-rate-desc'),
+            autoCost: document.getElementById('auto-rate-cost'),
             costs: {
                 adder: document.getElementById('cost-adder'),
                 mult: document.getElementById('cost-mult')
             }
         };
 
+        // --- GAME LOOP (AUTO CLICK) ---
+        setInterval(() => {
+            // Run logic 10 times a second
+            let rate = game.autoRate;
+            
+            if (boostActive) {
+                rate = 10; // 10 clicks per second during boost
+            }
+
+            // Accumulate clicks
+            // Since we run 10 times a second, we add rate/10
+            clickAccumulator += (rate / 10);
+
+            if (clickAccumulator >= 1) {
+                let clicksToDo = Math.floor(clickAccumulator);
+                let yieldPerClick = calculateYield();
+                
+                game.score += (yieldPerClick * clicksToDo);
+                
+                // Visual pop on source occasionally
+                const src = document.querySelector('.cube.source');
+                if(src && clicksToDo > 0) {
+                    src.style.transform = "scale(0.95)";
+                    setTimeout(()=>src.style.transform = "scale(1)", 50);
+                }
+
+                clickAccumulator -= clicksToDo;
+                updateUI();
+            }
+
+            updateBoostBtn();
+
+        }, 100); // 100ms interval
+
         // --- MATH ENGINE ---
 
         function calculateYield() {
-            // Organize grid into Columns (X) containing Rows (Y)
-            let columns = {};
-            let minX = 0;
-
-            for (let key in game.grid) {
-                let [x, y] = key.split(',').map(Number);
-                if (!columns[x]) columns[x] = [];
-                columns[x].push({ y, cube: game.grid[key].cube });
-                if (x < minX) minX = x;
-            }
-
-            // The "Stream" starts at 0 value from the far left
+            let columns = organizeGrid();
             let currentFlow = 0;
 
-            // Iterate from Leftmost Node -> Right (towards Source at 0)
-            for (let x = minX; x <= 0; x++) {
-                if (!columns[x]) {
-                    // Gap in the line? Flow continues unchanged.
-                    continue; 
-                }
+            let minX = 0;
+            Object.keys(columns).forEach(k => { if(Number(k) < minX) minX = Number(k); });
 
-                // 1. Calculate Branch Value (Vertical Logic)
-                // We assume branches feed DOWN into the main node at Y=0
-                // We only care about cubes, not empty slots
-                
+            for (let x = minX; x <= 0; x++) {
+                if (!columns[x]) continue;
+
                 let branchAdd = 0;
                 let branchMult = 1;
 
-                // Sort Y descending (Top -> Bottom)
                 columns[x].sort((a,b) => b.y - a.y);
                 
                 let mainNode = null;
 
                 columns[x].forEach(node => {
                     if (!node.cube) return;
-
                     if (node.y > 0) {
-                        // This is a branch item
-                        // For simplicity in this logic: All branch items combine
-                        // to modify the Main Node.
-                        // Adders add to branch power, Mults multiply branch power.
                         let p = getPower(node.cube);
                         if (node.cube.type === 'mult') branchMult *= p;
                         else branchAdd += p;
@@ -303,30 +359,77 @@
                     }
                 });
 
-                // 2. Apply Main Node Logic
                 if (mainNode) {
                     if (mainNode.type === 'source') {
-                        // Source adds its base to whatever flow reached it
                         currentFlow += mainNode.level;
                     } else {
-                        // Regular Machine
                         let nodeBase = getPower(mainNode);
-                        
-                        // Apply Branch Effects to this Node's Power
-                        // (Logic: Branch multipliers boost the Node's base effectiveness)
                         let totalNodeEffect = (nodeBase + branchAdd) * branchMult;
 
-                        // Apply Node to Stream
+                        if (mainNode.type === 'mult') currentFlow *= totalNodeEffect;
+                        else currentFlow += totalNodeEffect;
+                    }
+                }
+            }
+            return currentFlow;
+        }
+
+        function organizeGrid() {
+            let columns = {};
+            for (let key in game.grid) {
+                let [x, y] = key.split(',').map(Number);
+                if (!columns[x]) columns[x] = [];
+                columns[x].push({ y, cube: game.grid[key].cube });
+            }
+            return columns;
+        }
+
+        function getEquationString() {
+            let columns = organizeGrid();
+            let minX = 0;
+            Object.keys(columns).forEach(k => { if(Number(k) < minX) minX = Number(k); });
+
+            let eq = "0"; // Start of stream
+
+            for (let x = minX; x <= 0; x++) {
+                if (!columns[x]) continue;
+
+                columns[x].sort((a,b) => b.y - a.y);
+                let mainNode = null;
+                let branchStr = ""; 
+                let bAdd = 0;
+                let bMult = 1;
+
+                columns[x].forEach(node => {
+                    if (!node.cube) return;
+                    if (node.y > 0) {
+                        let p = getPower(node.cube);
+                        let sym = node.cube.type === 'mult' ? 'x' : '+';
+                        if(node.cube.type === 'mult') bMult *= p; else bAdd += p;
+                    } else if (node.y === 0) {
+                        mainNode = node.cube;
+                    }
+                });
+
+                if (mainNode) {
+                    if (mainNode.type === 'source') {
+                        eq = `(${eq} + Source[${mainNode.level}])`;
+                    } else {
+                        let val = getPower(mainNode);
+                        // Construct branch logic text
+                        let nodeTotal = val;
+                        // Roughly representing the logic:
+                        let combined = `(${val.toFixed(1)} + ${bAdd}) * ${bMult.toFixed(1)}`;
+                        
                         if (mainNode.type === 'mult') {
-                             currentFlow *= totalNodeEffect;
+                             eq = `(${eq} * [${combined}])`;
                         } else {
-                             currentFlow += totalNodeEffect;
+                             eq = `(${eq} + [${combined}])`;
                         }
                     }
                 }
             }
-
-            return currentFlow;
+            return eq + " = Yield";
         }
 
         function getPower(cube) {
@@ -335,22 +438,17 @@
             return cube.level;
         }
 
-        // --- EXPANSION COST LOGIC ---
         function getExpansionCost(x, y) {
             const baseCost = 50;
-            
             if (y === 0) {
-                // Main Line (Leftward expansion)
-                // Cost scales moderately: 50 * (distance^1.5)
                 let dist = Math.abs(x);
                 return Math.floor(baseCost * Math.pow(dist, 1.5)) + baseCost;
             } else {
-                // Branch (Upward expansion)
-                // Cost scales STEEPLY: 4 * y^2 relative to below?
-                // Let's use a simpler polynomial that feels steep.
                 return Math.floor(baseCost * Math.pow(y + 1, 2.8));
             }
         }
+
+        // --- ACTIONS ---
 
         function unlockSlot(x, y) {
             let cost = getExpansionCost(x, y);
@@ -362,12 +460,62 @@
             }
         }
 
-        // --- CORE ACTIONS ---
+        function upgradeAutoRate() {
+            if (game.score >= game.autoCost) {
+                game.score -= game.autoCost;
+                game.autoRate = game.autoRate * 2; // Double speed
+                game.autoCost = Math.floor(game.autoCost * 3); // Steep cost increase
+                updateUI();
+            }
+        }
 
-        function clickSource() {
+        function activateBoost() {
+            let now = Date.now();
+            if (boostActive) return;
+            if (now - game.lastBoost < BOOST_COOLDOWN) return;
+
+            game.lastBoost = now;
+            boostActive = true;
+            ui.boostBtn.classList.add('active');
+            ui.boostBtn.innerHTML = "🚀 ACTIVE!";
+
+            setTimeout(() => {
+                boostActive = false;
+                ui.boostBtn.classList.remove('active');
+                updateBoostBtn();
+            }, BOOST_DURATION);
+        }
+
+        function updateBoostBtn() {
+            if (boostActive) return;
+
+            let now = Date.now();
+            let elapsed = now - game.lastBoost;
+
+            if (elapsed >= BOOST_COOLDOWN) {
+                ui.boostBtn.disabled = false;
+                ui.boostBtn.innerHTML = "🚀 BOOST";
+            } else {
+                ui.boostBtn.disabled = true;
+                let remaining = Math.ceil((BOOST_COOLDOWN - elapsed) / 60000);
+                let remainingSec = Math.ceil((BOOST_COOLDOWN - elapsed) / 1000);
+                
+                let text = remaining > 1 ? `${remaining}m` : `${remainingSec}s`;
+                ui.boostBtn.innerHTML = `⏳ ${text}`;
+            }
+        }
+
+        function toggleMenu() {
+            ui.menu.classList.toggle('open');
+            // Update equation when opening
+            if (ui.menu.classList.contains('open')) {
+                ui.eqText.innerText = getEquationString();
+            }
+        }
+
+        function manualClick() {
             let val = calculateYield();
             game.score += val;
-            
             const src = document.querySelector('.cube.source');
             if(src) {
                 src.style.transform = "scale(0.9)";
@@ -381,50 +529,38 @@
         function renderWorld() {
             ui.world.innerHTML = '';
 
-            // 1. Render Slots & Cubes
             for (let key in game.grid) {
                 const [x, y] = key.split(',').map(Number);
                 const cell = game.grid[key];
 
                 const wrapper = document.createElement('div');
                 wrapper.className = 'node-wrapper';
-                // X goes negative (left), Y goes positive (up)
                 wrapper.style.left = (CENTER_X + (x * CELL_SIZE)) + 'px';
                 wrapper.style.bottom = (CENTER_Y + (y * CELL_SIZE)) + 'px';
 
                 const slot = document.createElement('div');
                 slot.className = 'slot';
                 
-                // Visual Connectors
                 if (y === 0 && x !== 0) slot.classList.add('arrow-right');
                 if (y > 0) slot.classList.add('arrow-down');
 
-                // Drag Logic
                 slot.ondragover = (e) => { e.preventDefault(); slot.classList.add('drag-target'); };
                 slot.ondragleave = () => slot.classList.remove('drag-target');
                 slot.ondrop = (e) => handleDrop(e, x, y);
 
-                // Render Cube if exists
                 if (cell.cube) {
                     const cube = document.createElement('div');
                     cube.className = `cube ${cell.cube.type}`;
                     cube.draggable = (cell.cube.type !== 'source');
                     cube.ondragstart = (e) => dragStartGrid(e, x, y);
-                    if (cell.cube.type === 'source') cube.onclick = clickSource;
+                    if (cell.cube.type === 'source') cube.onclick = manualClick;
 
-                    // INFORMATIVE TEXT
                     let mainTxt = "";
                     let subTxt = `Lv ${cell.cube.level}`;
                     
-                    if(cell.cube.type==='source') {
-                        mainTxt = "⚡";
-                    } else if(cell.cube.type==='adder') {
-                        let val = getPower(cell.cube);
-                        mainTxt = `+${val}`;
-                    } else if(cell.cube.type==='mult') {
-                        let val = getPower(cell.cube).toFixed(1);
-                        mainTxt = `x${val}`;
-                    }
+                    if(cell.cube.type==='source') mainTxt = "⚡";
+                    else if(cell.cube.type==='adder') mainTxt = `+${getPower(cell.cube)}`;
+                    else if(cell.cube.type==='mult') mainTxt = `x${getPower(cell.cube).toFixed(1)}`;
 
                     cube.innerHTML = `<span class="cube-main-val">${mainTxt}</span><span class="cube-sub">${subTxt}</span>`;
                     slot.appendChild(cube);
@@ -434,24 +570,15 @@
                 ui.world.appendChild(wrapper);
             }
 
-            // 2. Render Expansion (+) Buttons
-            // Scan for valid expansion points
             let expansionPoints = new Set();
             for (let key in game.grid) {
                 const [x, y] = key.split(',').map(Number);
-                
-                // Left on main line
                 if (y === 0) expansionPoints.add(`${x-1},0`);
-                
-                // Up on branch (Avoid Source Branching)
-                if (!(x === 0 && y >= 0)) {
-                    expansionPoints.add(`${x},${y+1}`);
-                }
+                if (!(x === 0 && y >= 0)) expansionPoints.add(`${x},${y+1}`);
             }
 
             expansionPoints.forEach(key => {
-                if (game.grid[key]) return; // Slot already exists
-
+                if (game.grid[key]) return;
                 const [x, y] = key.split(',').map(Number);
                 const cost = getExpansionCost(x, y);
 
@@ -459,30 +586,19 @@
                 btn.className = 'expand-btn';
                 btn.innerHTML = `+<div class="expand-cost">$${cost}</div>`;
                 btn.onclick = () => unlockSlot(x, y);
-                
-                btn.style.left = (CENTER_X + (x * CELL_SIZE) + 32) + 'px'; // Center in 100px gap
+                btn.style.left = (CENTER_X + (x * CELL_SIZE) + 32) + 'px';
                 btn.style.bottom = (CENTER_Y + (y * CELL_SIZE) + 32) + 'px';
-                
                 ui.world.appendChild(btn);
             });
         }
 
         // --- DRAG AND DROP ---
-
-        function dragStartShop(e, type) {
-            e.dataTransfer.setData("source", "shop");
-            e.dataTransfer.setData("type", type);
-        }
-
-        function dragStartGrid(e, x, y) {
-            e.dataTransfer.setData("source", "grid");
-            e.dataTransfer.setData("origin", `${x},${y}`);
-        }
+        function dragStartShop(e, type) { e.dataTransfer.setData("source", "shop"); e.dataTransfer.setData("type", type); }
+        function dragStartGrid(e, x, y) { e.dataTransfer.setData("source", "grid"); e.dataTransfer.setData("origin", `${x},${y}`); }
 
         function handleDrop(e, x, y) {
             e.preventDefault();
             e.target.closest('.slot').classList.remove('drag-target');
-            
             const source = e.dataTransfer.getData("source");
             const targetKey = `${x},${y}`;
             const targetCell = game.grid[targetKey];
@@ -490,19 +606,15 @@
             if (source === "shop") {
                 const type = e.dataTransfer.getData("type");
                 buyAndPlace(type, targetKey);
-            } 
-            else if (source === "grid") {
+            } else if (source === "grid") {
                 const originKey = e.dataTransfer.getData("origin");
-                if (originKey === targetKey) return;
-                moveOrMerge(originKey, targetKey);
+                if (originKey !== targetKey) moveOrMerge(originKey, targetKey);
             }
         }
 
         function buyAndPlace(type, key) {
             const cost = game.costs[type];
             const cell = game.grid[key];
-
-            // If occupied, check for merge/upgrade (same type)
             if (cell.cube) {
                 if (cell.cube.type === type && game.score >= cost) {
                     game.score -= cost;
@@ -513,8 +625,6 @@
                 }
                 return;
             }
-
-            // Buy new
             if (game.score >= cost) {
                 game.score -= cost;
                 game.costs[type] = Math.ceil(game.costs[type] * 1.3);
@@ -527,21 +637,15 @@
         function moveOrMerge(originKey, targetKey) {
             const originCell = game.grid[originKey];
             const targetCell = game.grid[targetKey];
-            
             if (!originCell.cube) return;
-
             if (!targetCell.cube) {
-                // Move
                 targetCell.cube = originCell.cube;
                 originCell.cube = null;
             } else {
-                // Interact
                 if (originCell.cube.type === targetCell.cube.type) {
-                    // Merge (Sum Levels)
                     targetCell.cube.level += originCell.cube.level;
                     originCell.cube = null;
                 } else {
-                    // Swap
                     let temp = targetCell.cube;
                     targetCell.cube = originCell.cube;
                     originCell.cube = temp;
@@ -556,36 +660,37 @@
             ui.rate.textContent = `Yield: ${calculateYield().toFixed(1)}`;
             ui.costs.adder.textContent = game.costs.adder;
             ui.costs.mult.textContent = game.costs.mult;
+            
+            ui.autoDesc.textContent = `Rate: ${game.autoRate}/s`;
+            ui.autoCost.textContent = `$${game.autoCost}`;
         }
 
-        // --- SAVE SYSTEM ---
+        // --- SYSTEM ---
         function saveGame() {
-            localStorage.setItem('FishboneV2Save', JSON.stringify(game));
-            // Visual feedback
-            const btn = document.querySelector('.controls button');
-            let orig = btn.innerText;
-            btn.innerText = "Saved!";
-            setTimeout(() => btn.innerText = orig, 1000);
+            localStorage.setItem('FishboneV3Save', JSON.stringify(game));
+            alert("Saved!");
         }
-
         function resetGame() {
             if(confirm("Reset everything?")) {
-                localStorage.removeItem('FishboneV2Save');
+                localStorage.removeItem('FishboneV3Save');
                 location.reload();
             }
         }
-
         function loadGame() {
-            const d = localStorage.getItem('FishboneV2Save');
+            const d = localStorage.getItem('FishboneV3Save');
             if(d) game = JSON.parse(d);
+            // Default check for new variables if loading old save
+            if(!game.autoRate) game.autoRate = 0.5;
+            if(!game.autoCost) game.autoCost = 500;
+            if(!game.lastBoost) game.lastBoost = 0;
+            
             renderWorld();
             updateUI();
+            updateBoostBtn();
         }
 
-        // --- INIT ---
         window.onload = () => {
             loadGame();
-            // Center Viewport
             ui.viewport.scrollLeft = CENTER_X - (window.innerWidth / 2) + 50;
             ui.viewport.scrollTop = (4000 - CENTER_Y) - (window.innerHeight / 2);
         };
