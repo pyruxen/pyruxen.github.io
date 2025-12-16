@@ -3,19 +3,20 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Math Grid Idle</title>
+    <title>Modular Merge Idle</title>
     <style>
         :root {
-            --bg-color: #212529;
-            --panel-color: #343a40;
-            --accent-gold: #f1c40f;
-            --accent-blue: #3498db;
-            --accent-red: #e74c3c;
-            --text-color: #f8f9fa;
+            --bg-color: #1e1e2e;
+            --slot-bg: #313244;
+            --text-color: #cdd6f4;
+            --accent-green: #a6e3a1;
+            --accent-blue: #89b4fa;
+            --accent-red: #f38ba8;
+            --accent-gold: #f9e2af;
         }
 
         body {
-            font-family: 'Courier New', Courier, monospace;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             background-color: var(--bg-color);
             color: var(--text-color);
             margin: 0;
@@ -23,439 +24,433 @@
             flex-direction: column;
             align-items: center;
             height: 100vh;
-            overflow: hidden;
+            user-select: none; /* Prevents text highlighting while dragging */
         }
 
         /* HEADER */
         header {
-            text-align: center;
+            width: 100%;
             padding: 20px;
-            width: 100%;
-            background-color: var(--panel-color);
-            box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+            background-color: rgba(0,0,0,0.2);
+            text-align: center;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.2);
         }
 
-        h1 { margin: 0; font-size: 1.5rem; }
-        #score-display { font-size: 2.5rem; color: var(--accent-gold); font-weight: bold; margin-top: 10px; }
-        #rate-display { font-size: 1rem; color: #adb5bd; }
+        #score-display { font-size: 3rem; font-weight: bold; color: var(--accent-gold); }
+        #equation-display { font-family: 'Courier New', monospace; font-size: 1.1rem; color: var(--accent-blue); margin-top: 5px; opacity: 0.8; }
 
-        /* MAIN LAYOUT */
-        .main-container {
-            display: flex;
-            width: 100%;
-            height: 100%;
-            max-width: 1200px;
-        }
-
-        /* LEFT: THE GRID */
-        .grid-section {
-            flex: 2;
+        /* THE CHAIN GRID */
+        .game-area {
+            flex: 1;
             display: flex;
             justify-content: center;
             align-items: center;
+            width: 100%;
+            overflow-x: auto;
             padding: 20px;
-            overflow: auto;
         }
 
-        .grid-container {
-            display: grid;
-            grid-template-columns: repeat(3, 100px); /* Starts small, JS will change this */
-            gap: 15px;
+        .chain-container {
+            display: flex;
+            flex-direction: row-reverse; /* Slot 0 (Source) is on the Right, mods flow into it */
+            align-items: center;
+            gap: 10px;
             padding: 20px;
-            background-color: #2b3035;
-            border-radius: 15px;
-            box-shadow: inset 0 0 20px rgba(0,0,0,0.5);
         }
 
-        /* CUBE STYLES */
-        .cube {
+        /* SLOTS & CUBES */
+        .slot {
             width: 100px;
             height: 100px;
-            background-color: #495057;
+            background-color: var(--slot-bg);
+            border-radius: 12px;
+            border: 2px dashed #45475a;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+            transition: transform 0.2s;
+        }
+        
+        /* Arrows between slots */
+        .slot:not(:first-child)::after {
+            content: "➜";
+            position: absolute;
+            right: -25px; /* Points to the next item in row-reverse */
+            color: #585b70;
+            font-size: 1.5rem;
+        }
+
+        .cube {
+            width: 90px;
+            height: 90px;
             border-radius: 10px;
             display: flex;
             flex-direction: column;
             justify-content: center;
             align-items: center;
-            font-weight: bold;
-            cursor: default;
-            user-select: none;
+            cursor: grab;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
             position: relative;
-            box-shadow: 0 4px 0 rgba(0,0,0,0.3);
-            transition: transform 0.1s;
+            font-weight: bold;
+            z-index: 2;
         }
 
-        .cube.center-node {
-            background-color: var(--accent-gold);
-            color: #2c3e50;
-            cursor: pointer;
-            box-shadow: 0 0 15px var(--accent-gold);
-            z-index: 10;
+        .cube:active { cursor: grabbing; }
+
+        /* Types */
+        .cube.source { background-color: var(--accent-gold); color: #1e1e2e; cursor: pointer; border: 3px solid #fab387; }
+        .cube.adder { background-color: var(--accent-blue); color: #1e1e2e; border: 2px solid #74c7ec; }
+        .cube.multiplier { background-color: var(--accent-red); color: #1e1e2e; border: 2px solid #eba0ac; }
+
+        .lvl-badge {
+            position: absolute;
+            top: 5px;
+            right: 5px;
+            background: rgba(0,0,0,0.4);
+            color: white;
+            font-size: 0.7rem;
+            padding: 2px 5px;
+            border-radius: 4px;
         }
 
-        .cube.center-node:active { transform: scale(0.95); }
+        .cube-val { font-size: 1.4rem; }
+        .cube-desc { font-size: 0.7rem; opacity: 0.8; }
 
-        .cube.adder { background-color: var(--accent-blue); border: 2px solid #2980b9; }
-        .cube.multiplier { background-color: var(--accent-red); border: 2px solid #c0392b; }
-        .cube.empty { border: 2px dashed #6c757d; background: transparent; color: #6c757d; }
-
-        .cube-type { font-size: 0.8rem; text-transform: uppercase; margin-bottom: 5px; }
-        .cube-val { font-size: 1.5rem; }
-
-        /* RIGHT: THE SHOP */
-        .shop-section {
-            flex: 1;
-            background-color: var(--panel-color);
+        /* SHOP & CONTROLS */
+        .ui-panel {
+            width: 100%;
+            background-color: #313244;
             padding: 20px;
             display: flex;
-            flex-direction: column;
-            border-left: 2px solid #495057;
+            justify-content: center;
+            gap: 15px;
+            border-top: 1px solid #45475a;
         }
 
-        .shop-header { text-align: center; margin-bottom: 20px; border-bottom: 1px solid #495057; padding-bottom: 10px;}
-
-        .upgrade-btn {
-            background-color: #495057;
-            color: white;
+        .btn {
+            background-color: #45475a;
             border: none;
-            padding: 15px;
-            margin-bottom: 10px;
+            color: white;
+            padding: 15px 25px;
             border-radius: 8px;
             cursor: pointer;
-            text-align: left;
-            transition: all 0.2s;
+            font-size: 1rem;
             display: flex;
-            justify-content: space-between;
+            flex-direction: column;
             align-items: center;
+            min-width: 120px;
+            transition: background 0.2s;
         }
 
-        .upgrade-btn:hover { background-color: #6c757d; }
-        .upgrade-btn:disabled { opacity: 0.5; cursor: not-allowed; }
-        
-        .cost-tag { color: var(--accent-gold); font-weight: bold; }
-        .desc { font-size: 0.8rem; color: #ced4da; display: block; margin-top: 4px; }
+        .btn:hover:not(:disabled) { background-color: #585b70; }
+        .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+        .btn span.cost { color: var(--accent-gold); font-size: 0.9rem; margin-top: 5px; }
 
-        /* CONTROLS */
-        .controls {
-            margin-top: auto;
-            display: flex;
-            gap: 10px;
-        }
-        .control-btn {
-            flex: 1;
-            padding: 10px;
-            background: #212529;
-            color: #6c757d;
-            border: 1px solid #495057;
-            cursor: pointer;
-        }
+        .btn-red { border-bottom: 3px solid var(--accent-red); }
+        .btn-blue { border-bottom: 3px solid var(--accent-blue); }
+        .btn-gray { border-bottom: 3px solid #9399b2; }
+
     </style>
 </head>
 <body>
 
     <header>
         <div id="score-display">0</div>
-        <div id="rate-display">Current Math: (1 + 0) x 1 = 1 per click</div>
+        <div id="equation-display">Equation: Base</div>
     </header>
 
-    <div class="main-container">
-        <div class="grid-section">
-            <div id="grid-container" class="grid-container">
-                </div>
-        </div>
-
-        <div class="shop-section">
-            <div class="shop-header"><h2>🧪 Lab Upgrades</h2></div>
-
-            <button class="upgrade-btn" id="btn-upgrade-center" onclick="upgradeCenter()">
-                <div>
-                    <span>Upgrade Center Node</span>
-                    <span class="desc">Increases base value by +1</span>
-                </div>
-                <span class="cost-tag" id="cost-center">10</span>
-            </button>
-
-            <button class="upgrade-btn" id="btn-expand-grid" onclick="expandGrid()">
-                <div>
-                    <span>Expand Grid</span>
-                    <span class="desc">Unlocks a new empty slot</span>
-                </div>
-                <span class="cost-tag" id="cost-expand">50</span>
-            </button>
-
-            <hr style="border: 0; border-top: 1px solid #495057; width: 100%; margin: 15px 0;">
-
-            <button class="upgrade-btn" id="btn-buy-adder" onclick="buyCube('adder')">
-                <div>
-                    <span>Buy Adder Cube (+1)</span>
-                    <span class="desc">Adds to base value</span>
-                </div>
-                <span class="cost-tag" id="cost-adder">25</span>
-            </button>
-
-            <button class="upgrade-btn" id="btn-buy-multi" onclick="buyCube('multiplier')">
-                <div>
-                    <span>Buy Multi Cube (x1.1)</span>
-                    <span class="desc">Multiplies total result</span>
-                </div>
-                <span class="cost-tag" id="cost-multi">100</span>
-            </button>
-
-            <button class="upgrade-btn" id="btn-buy-auto" onclick="buyAutoClicker()">
-                <div>
-                    <span>Auto-Clicker</span>
-                    <span class="desc">Clicks the center automatically</span>
-                </div>
-                <span class="cost-tag" id="cost-auto">200</span>
-            </button>
-
-            <div class="controls">
-                <button class="control-btn" onclick="resetGame()">Reset</button>
-                <button class="control-btn" onclick="saveGame()">Save</button>
+    <div class="game-area">
+        <div class="chain-container" id="grid">
             </div>
-        </div>
+    </div>
+
+    <div class="ui-panel">
+        <button class="btn btn-blue" id="btn-buy-add" onclick="buyCube('adder')">
+            + Adder
+            <span class="cost" id="cost-adder">Cost: 10</span>
+        </button>
+
+        <button class="btn btn-red" id="btn-buy-mult" onclick="buyCube('multiplier')">
+            x Multiplier
+            <span class="cost" id="cost-mult">Cost: 50</span>
+        </button>
+
+        <button class="btn btn-gray" id="btn-buy-slot" onclick="buySlot()">
+            Expand Chain
+            <span class="cost" id="cost-slot">Cost: 100</span>
+        </button>
+
+        <div style="width: 2px; background: #45475a;"></div>
+
+        <button class="btn" style="min-width: auto;" onclick="resetGame()">♻️ Reset</button>
     </div>
 
     <script>
-        // --- GAME DATA ---
+        // --- CONFIGURATION ---
+        // Base stats for Level 1 cubes
+        const STATS = {
+            adder: { base: 1, growth: 1 },         // Lvl 1 adds 1, Lvl 2 adds 2...
+            multiplier: { base: 1.1, growth: 0.1 } // Lvl 1 x1.1, Lvl 2 x1.2...
+        };
+
+        // --- GAME STATE ---
         let game = {
             score: 0,
-            baseValue: 1,       // Value of the center node
-            baseCost: 10,       // Cost to upgrade center
+            slotsUnlocked: 3, // Start with Source + 2 empty slots
             
-            slotsUnlocked: 1,   // Starts with just the center (1)
-            expandCost: 50,
-            
-            cubes: [],          // Array to hold our purchased math cubes
-
-            autoClickers: 0,
-            autoCost: 200,
+            // The Grid: Index 0 is always Source. Others are null or objects.
+            grid: [
+                { type: 'source', level: 1 } // Index 0
+            ],
 
             costs: {
-                adder: 25,
-                multiplier: 100
+                adder: 10,
+                multiplier: 50,
+                slot: 100
             }
         };
 
-        // --- DOM ELEMENTS ---
+        // --- UI ELEMENTS ---
         const ui = {
             score: document.getElementById('score-display'),
-            rate: document.getElementById('rate-display'),
-            grid: document.getElementById('grid-container'),
+            equation: document.getElementById('equation-display'),
+            grid: document.getElementById('grid'),
             costs: {
-                center: document.getElementById('cost-center'),
-                expand: document.getElementById('cost-expand'),
                 adder: document.getElementById('cost-adder'),
-                multi: document.getElementById('cost-multi'),
-                auto: document.getElementById('cost-auto')
+                mult: document.getElementById('cost-mult'),
+                slot: document.getElementById('cost-slot')
             },
             btns: {
-                center: document.getElementById('btn-upgrade-center'),
-                expand: document.getElementById('btn-expand-grid'),
-                adder: document.getElementById('btn-buy-adder'),
-                multi: document.getElementById('btn-buy-multi'),
-                auto: document.getElementById('btn-buy-auto')
+                adder: document.getElementById('btn-buy-add'),
+                mult: document.getElementById('btn-buy-mult'),
+                slot: document.getElementById('btn-buy-slot')
             }
         };
 
         // --- CORE LOGIC ---
 
-        function calculateClickValue() {
-            let total = game.baseValue;
-            let adders = 0;
-            let multipliers = 1;
+        // Calculate value based on current chain
+        function calculateOutput() {
+            // Start with Source Value (Base 1)
+            let val = 1; 
+            let equationText = "1";
 
-            // Loop through all purchased cubes and apply their math
-            game.cubes.forEach(cube => {
-                if (cube.type === 'adder') adders += cube.power;
-                if (cube.type === 'multiplier') multipliers *= cube.power;
-            });
-
-            // The Math Formula: (Base + Adders) * Multipliers
-            return (total + adders) * multipliers;
+            // Loop through slots starting from 1 up to the end
+            // We assume the signal flows: Slot N -> ... -> Slot 1 -> Slot 0
+            // But mathematically, we apply Slot 1 to Base, then Slot 2 to that result.
+            for (let i = 1; i < game.grid.length; i++) {
+                const cube = game.grid[i];
+                if (cube) {
+                    if (cube.type === 'adder') {
+                        let power = STATS.adder.base + ((cube.level - 1) * STATS.adder.growth);
+                        val += power;
+                        equationText = `(${equationText} + ${power})`;
+                    } 
+                    else if (cube.type === 'multiplier') {
+                        let power = STATS.multiplier.base + ((cube.level - 1) * STATS.multiplier.growth);
+                        // Rounding to avoid ugly floating point math (1.100000004)
+                        power = Math.round(power * 10) / 10;
+                        val *= power;
+                        equationText = `(${equationText} x ${power})`;
+                    }
+                }
+            }
+            return { val, text: equationText };
         }
 
-        function clickCenter() {
-            let val = calculateClickValue();
-            game.score += val;
+        function clickSource() {
+            const result = calculateOutput();
+            game.score += result.val;
             
-            // Visual feedback (simple flash)
-            const centerNode = document.querySelector('.center-node');
-            centerNode.style.transform = "scale(0.9)";
-            setTimeout(() => centerNode.style.transform = "scale(1)", 100);
+            // Visual Pop effect
+            const sourceEl = document.querySelector('.cube.source');
+            sourceEl.style.transform = "scale(0.9)";
+            setTimeout(() => sourceEl.style.transform = "scale(1)", 100);
 
             updateUI();
         }
 
-        // --- SHOP FUNCTIONS ---
-
-        function upgradeCenter() {
-            if (game.score >= game.baseCost) {
-                game.score -= game.baseCost;
-                game.baseValue += 1;
-                game.baseCost = Math.floor(game.baseCost * 1.5);
-                updateUI();
-            }
-        }
-
-        function expandGrid() {
-            if (game.score >= game.expandCost) {
-                game.score -= game.expandCost;
-                game.slotsUnlocked++;
-                game.expandCost = Math.floor(game.expandCost * 2);
-                updateUI();
-                renderGrid(); // Re-draw grid to show new empty slot
-            }
-        }
+        // --- SHOP & MERGE LOGIC ---
 
         function buyCube(type) {
-            // Check if we have room
-            if (game.cubes.length >= (game.slotsUnlocked - 1)) {
-                alert("No empty slots! Expand your grid first.");
+            let cost = type === 'adder' ? game.costs.adder : game.costs.multiplier;
+            
+            // Check Score
+            if (game.score < cost) return;
+
+            // Find first empty slot (skipping 0 because that's source)
+            let emptyIndex = -1;
+            for(let i=1; i < game.slotsUnlocked; i++) {
+                if (!game.grid[i]) {
+                    emptyIndex = i;
+                    break;
+                }
+            }
+
+            if (emptyIndex === -1) {
+                alert("No empty slots! Expand chain or merge existing cubes.");
                 return;
             }
 
-            let cost = game.costs[type];
-            if (game.score >= cost) {
-                game.score -= cost;
-                
-                // Add new cube to data
-                if (type === 'adder') {
-                    game.cubes.push({ type: 'adder', power: 1 });
-                    game.costs.adder = Math.floor(game.costs.adder * 1.3);
-                } else if (type === 'multiplier') {
-                    game.cubes.push({ type: 'multiplier', power: 1.1 });
-                    game.costs.multiplier = Math.floor(game.costs.multiplier * 1.4);
-                }
-
-                updateUI();
-                renderGrid();
-            }
-        }
-
-        function buyAutoClicker() {
-            if (game.score >= game.autoCost) {
-                game.score -= game.autoCost;
-                game.autoClickers++;
-                game.autoCost = Math.floor(game.autoCost * 1.5);
-                updateUI();
-            }
-        }
-
-        // --- RENDER FUNCTIONS ---
-
-        function renderGrid() {
-            ui.grid.innerHTML = ''; // Clear current grid
-
-            // 1. Calculate Grid Columns based on unlocked slots (make it look square-ish)
-            const cols = Math.ceil(Math.sqrt(game.slotsUnlocked));
-            ui.grid.style.gridTemplateColumns = `repeat(${cols}, 100px)`;
-
-            // 2. Render Center Node (Always index 0)
-            let centerDiv = document.createElement('div');
-            centerDiv.className = 'cube center-node';
-            centerDiv.onclick = clickCenter;
-            centerDiv.innerHTML = `<span class="cube-type">SOURCE</span><span class="cube-val">${game.baseValue}</span>`;
-            ui.grid.appendChild(centerDiv);
-
-            // 3. Render Purchased Cubes
-            game.cubes.forEach(cube => {
-                let div = document.createElement('div');
-                div.className = `cube ${cube.type}`;
-                let symbol = cube.type === 'adder' ? '+' : 'x';
-                let valDisplay = cube.type === 'multiplier' ? cube.power.toFixed(1) : cube.power;
-                div.innerHTML = `<span class="cube-type">${cube.type}</span><span class="cube-val">${symbol}${valDisplay}</span>`;
-                ui.grid.appendChild(div);
-            });
-
-            // 4. Render Empty Slots
-            let filledSlots = 1 + game.cubes.length; // 1 for center + cubes
-            let emptySlots = game.slotsUnlocked - filledSlots;
-
-            for(let i=0; i<emptySlots; i++) {
-                let div = document.createElement('div');
-                div.className = 'cube empty';
-                div.innerHTML = 'EMPTY';
-                ui.grid.appendChild(div);
-            }
-        }
-
-        function updateUI() {
-            // Update Score
-            ui.score.textContent = Math.floor(game.score);
+            // Purchase
+            game.score -= cost;
+            game.grid[emptyIndex] = { type: type, level: 1 };
             
-            // Calculate current math for display
-            let totalAdd = 0;
-            let totalMulti = 1;
-            game.cubes.forEach(c => {
-                if(c.type === 'adder') totalAdd += c.power;
-                if(c.type === 'multiplier') totalMulti *= c.power;
-            });
-            ui.rate.textContent = `Math: (${game.baseValue} + ${totalAdd}) x ${totalMulti.toFixed(1)} = ${calculateClickValue().toFixed(1)} per click`;
+            // Increase price
+            if (type === 'adder') game.costs.adder = Math.ceil(game.costs.adder * 1.3);
+            else game.costs.multiplier = Math.ceil(game.costs.multiplier * 1.3);
 
-            // Update Costs
-            ui.costs.center.textContent = game.baseCost;
-            ui.costs.expand.textContent = game.expandCost;
-            ui.costs.adder.textContent = game.costs.adder;
-            ui.costs.multi.textContent = game.costs.multiplier;
-            ui.costs.auto.textContent = game.autoCost;
-
-            // Enable/Disable Buttons
-            ui.btns.center.disabled = game.score < game.baseCost;
-            ui.btns.expand.disabled = game.score < game.expandCost;
-            ui.btns.adder.disabled = game.score < game.costs.adder;
-            ui.btns.multi.disabled = game.score < game.costs.multiplier;
-            ui.btns.auto.disabled = game.score < game.autoCost;
-        }
-
-        // --- LOOPS & SAVE SYSTEM ---
-
-        // Auto Clicker Loop (runs every second)
-        setInterval(() => {
-            if (game.autoClickers > 0) {
-                // Determine value
-                let val = calculateClickValue();
-                // Add value * number of auto clickers
-                game.score += (val * game.autoClickers);
-                updateUI();
-                
-                // Visual effect on center node
-                const centerNode = document.querySelector('.center-node');
-                if(centerNode) {
-                    centerNode.style.opacity = 0.7;
-                    setTimeout(()=> centerNode.style.opacity = 1, 100);
-                }
-            }
-        }, 1000);
-
-        // Auto Save Loop (every 10s)
-        setInterval(saveGame, 10000);
-
-        function saveGame() {
-            localStorage.setItem('MathGridSave', JSON.stringify(game));
-            console.log("Saved");
-        }
-
-        function loadGame() {
-            let saved = JSON.parse(localStorage.getItem('MathGridSave'));
-            if (saved) {
-                game = saved;
-                // Fix potential nulls if we added new features since save
-                if(!game.costs) game.costs = { adder: 25, multiplier: 100 };
-            }
+            saveGame();
             renderGrid();
             updateUI();
         }
 
+        function buySlot() {
+            if (game.score >= game.costs.slot) {
+                game.score -= game.costs.slot;
+                game.slotsUnlocked++;
+                game.costs.slot *= 2;
+                saveGame();
+                renderGrid();
+                updateUI();
+            }
+        }
+
+        // --- DRAG AND DROP HANDLERS ---
+        
+        let draggedIndex = null;
+
+        function handleDragStart(e) {
+            draggedIndex = parseInt(e.target.dataset.index);
+            e.dataTransfer.effectAllowed = "move";
+        }
+
+        function handleDragOver(e) {
+            e.preventDefault(); // Necessary to allow dropping
+            e.dataTransfer.dropEffect = "move";
+        }
+
+        function handleDrop(e) {
+            e.preventDefault();
+            // Find the closest slot element
+            const slot = e.target.closest('.slot');
+            if (!slot) return;
+            
+            const targetIndex = parseInt(slot.dataset.index);
+
+            // Cannot interact with Source (Index 0)
+            if (draggedIndex === 0 || targetIndex === 0) return;
+            if (draggedIndex === targetIndex) return;
+
+            const sourceCube = game.grid[draggedIndex];
+            const targetCube = game.grid[targetIndex];
+
+            // LOGIC: MERGE, MOVE, or SWAP
+            if (!targetCube) {
+                // MOVE: Target is empty
+                game.grid[targetIndex] = sourceCube;
+                game.grid[draggedIndex] = null;
+            } else if (sourceCube.type === targetCube.type && sourceCube.level === targetCube.level) {
+                // MERGE: Same type and level
+                game.grid[targetIndex].level += 1;
+                game.grid[draggedIndex] = null;
+            } else {
+                // SWAP: Different cubes
+                game.grid[targetIndex] = sourceCube;
+                game.grid[draggedIndex] = targetCube;
+            }
+
+            saveGame();
+            renderGrid();
+            updateUI();
+        }
+
+        // --- RENDER & UPDATE ---
+
+        function renderGrid() {
+            ui.grid.innerHTML = '';
+            
+            // Create slots up to unlocked limit
+            // Note: Data is stored in game.grid. If game.grid[i] is undefined, it's empty.
+            for (let i = 0; i < game.slotsUnlocked; i++) {
+                const slot = document.createElement('div');
+                slot.className = 'slot';
+                slot.dataset.index = i;
+                
+                // Add Drag Drop Listeners to Slot
+                slot.addEventListener('dragover', handleDragOver);
+                slot.addEventListener('drop', handleDrop);
+
+                const cubeData = game.grid[i];
+
+                if (cubeData) {
+                    const cube = document.createElement('div');
+                    cube.className = `cube ${cubeData.type}`;
+                    cube.draggable = (i !== 0); // Source not draggable
+                    cube.dataset.index = i;
+                    
+                    if (i !== 0) cube.addEventListener('dragstart', handleDragStart);
+                    if (i === 0) cube.onclick = clickSource;
+
+                    // Calculate Display Text
+                    let valText = "";
+                    if (cubeData.type === 'source') valText = "⚡";
+                    else if (cubeData.type === 'adder') valText = "+" + (STATS.adder.base + (cubeData.level-1)*STATS.adder.growth);
+                    else if (cubeData.type === 'multiplier') valText = "x" + (Math.round((STATS.multiplier.base + (cubeData.level-1)*STATS.multiplier.growth)*10)/10);
+
+                    cube.innerHTML = `
+                        <span class="lvl-badge">Lv ${cubeData.level}</span>
+                        <span class="cube-val">${valText}</span>
+                        <span class="cube-desc">${cubeData.type}</span>
+                    `;
+                    slot.appendChild(cube);
+                }
+
+                ui.grid.appendChild(slot);
+            }
+        }
+
+        function updateUI() {
+            ui.score.textContent = Math.floor(game.score);
+            
+            const result = calculateOutput();
+            ui.equation.textContent = `Formula: ${result.text} = ${result.val.toFixed(1)} per click`;
+
+            ui.costs.adder.textContent = `Cost: ${game.costs.adder}`;
+            ui.costs.mult.textContent = `Cost: ${game.costs.multiplier}`;
+            ui.costs.slot.textContent = `Cost: ${game.costs.slot}`;
+
+            ui.btns.adder.disabled = game.score < game.costs.adder;
+            ui.btns.mult.disabled = game.score < game.costs.multiplier;
+            ui.btns.slot.disabled = game.score < game.costs.slot;
+        }
+
+        // --- SAVE SYSTEM ---
+        function saveGame() {
+            localStorage.setItem('ModularIdleSave', JSON.stringify(game));
+        }
+
+        function loadGame() {
+            const saved = JSON.parse(localStorage.getItem('ModularIdleSave'));
+            if (saved) {
+                game = saved;
+                // Ensure array length matches unlocked slots if corrupted
+                while(game.grid.length < game.slotsUnlocked) game.grid.push(null);
+            }
+        }
+
         function resetGame() {
-            if(confirm("Wipe save data?")) {
-                localStorage.removeItem('MathGridSave');
+            if(confirm("Reset everything?")) {
+                localStorage.removeItem('ModularIdleSave');
                 location.reload();
             }
         }
 
-        // Start
+        // Init
         loadGame();
+        renderGrid();
+        updateUI();
 
     </script>
 </body>
