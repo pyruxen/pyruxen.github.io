@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Fishbone Factory V6 (Optimized)</title>
+    <title>Fishbone Factory V7 (Signs & Vars)</title>
     <style>
         :root {
             --bg-color: #1a1b26;
@@ -15,6 +15,7 @@
             --accent-red: #f7768e;
             --accent-gold: #e0af68;
             --accent-purple: #bb9af7;
+            --accent-cyan: #7dcfff;
         }
 
         body {
@@ -30,67 +31,46 @@
 
         /* --- HUD --- */
         .hud-top {
-            height: 80px;
-            padding: 15px;
-            box-sizing: border-box;
-            display: flex;
-            justify-content: space-between;
-            background: #16161e;
-            border-bottom: 1px solid #414868;
-            z-index: 50;
+            height: 80px; padding: 15px; box-sizing: border-box;
+            display: flex; justify-content: space-between; background: #16161e;
+            border-bottom: 1px solid #414868; z-index: 50;
         }
-
         .hud-left { display: flex; gap: 10px; }
-        .hud-right { }
-
         .score-box {
-            background: rgba(26, 27, 38, 0.9);
-            padding: 10px 20px;
-            border-radius: 8px;
-            border: 1px solid #414868;
-            text-align: right;
-            min-width: 150px;
+            background: rgba(26, 27, 38, 0.9); padding: 5px 20px;
+            border-radius: 8px; border: 1px solid #414868; text-align: right; min-width: 150px;
+            display: flex; flex-direction: column; justify-content: center;
         }
-        .score-val { font-size: 2rem; font-weight: bold; color: var(--accent-gold); line-height: 1; }
-        .rate-val { font-family: monospace; color: #7aa2f7; font-size: 0.9rem; }
+        .score-val { font-size: 1.8rem; font-weight: bold; color: var(--accent-gold); line-height: 1.2; }
+        .rate-val { font-family: monospace; color: var(--accent-blue); font-size: 0.85rem; }
+        .sec-val { font-family: monospace; color: var(--accent-green); font-size: 0.85rem; }
 
         /* --- BUTTONS --- */
         .icon-btn {
-            width: 50px; height: 50px;
-            background: #24283b;
-            border: 2px solid #414868;
-            border-radius: 8px;
-            color: white; font-size: 1.5rem;
-            cursor: pointer; display: flex; justify-content: center; align-items: center;
-            transition: 0.2s;
+            width: 50px; height: 50px; background: #24283b;
+            border: 2px solid #414868; border-radius: 8px; color: white; font-size: 1.5rem;
+            cursor: pointer; display: flex; justify-content: center; align-items: center; transition: 0.2s;
         }
         .icon-btn:hover { background: #414868; }
 
         #boost-btn {
-            width: auto; padding: 0 15px;
-            background: #1a1b26;
-            border-color: var(--accent-purple);
-            color: var(--accent-purple);
-            font-weight: bold; font-size: 1rem;
-            position: relative; overflow: hidden;
+            width: auto; padding: 0 15px; background: #1a1b26;
+            border-color: var(--accent-purple); color: var(--accent-purple);
+            font-weight: bold; font-size: 1rem; position: relative; overflow: hidden;
         }
         #boost-btn.active { background: var(--accent-purple); color: #1a1b26; box-shadow: 0 0 15px var(--accent-purple); }
-        #boost-btn:disabled { opacity: 0.7; cursor: not-allowed; border-color: #565f89; color: #565f89; background: #1a1b26; box-shadow: none; }
+        .boost-fill { position: absolute; bottom: 0; left: 0; height: 3px; background: var(--accent-purple); width: 0%; transition: width 1s linear; }
 
         /* --- VIEWPORT --- */
         .viewport {
-            flex: 1;
-            overflow: auto;
-            position: relative; 
-            cursor: grab;
+            flex: 1; overflow: auto; position: relative; cursor: grab;
             background-image: linear-gradient(var(--grid-line) 1px, transparent 1px), linear-gradient(90deg, var(--grid-line) 1px, transparent 1px);
             background-size: 50px 50px;
         }
         .viewport:active { cursor: grabbing; }
-        
         .world-container { position: relative; width: 20000px; height: 10000px; }
 
-        /* --- NODES --- */
+        /* --- NODES (Numbers) --- */
         .node-wrapper { position: absolute; width: 100px; height: 100px; display: flex; justify-content: center; align-items: center; z-index: 10; }
         
         .slot {
@@ -98,62 +78,81 @@
             border: 2px solid #414868; border-radius: 12px; position: relative;
             display: flex; justify-content: center; align-items: center; transition: 0.2s;
         }
-        
-        .slot * { pointer-events: none; } 
         .slot.drag-target { border-color: var(--accent-blue); box-shadow: 0 0 15px var(--accent-blue); transform: scale(1.05); }
 
-        .arrow-right::after { content: "➜"; position: absolute; right: -28px; color: #414868; font-size: 2rem; z-index: 0; }
-        .arrow-down::after { content: "⬇"; position: absolute; bottom: -28px; color: #414868; font-size: 2rem; z-index: 0; }
-
-        .expand-btn {
-            width: 36px; height: 36px; background: #24283b;
-            border: 2px dashed var(--accent-green); border-radius: 50%;
-            color: var(--accent-green); font-size: 1.5rem; display: flex; justify-content: center; align-items: center;
-            cursor: pointer; position: absolute; z-index: 15; box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+        /* --- SIGNS (Small Boxes) --- */
+        .sign-wrapper {
+            position: absolute; width: 40px; height: 40px; z-index: 5;
+            display: flex; justify-content: center; align-items: center;
         }
-        .expand-btn:hover { background: var(--accent-green); color: #1a1b26; transform: scale(1.1); }
-        .expand-cost { pointer-events: none; position: absolute; top: -25px; font-size: 0.75rem; color: #1a1b26; background: var(--accent-green); padding: 2px 6px; border-radius: 4px; white-space: nowrap; font-weight: bold;}
+        .sign-slot {
+            width: 36px; height: 36px; background: #15161e;
+            border: 1px dashed #565f89; border-radius: 6px;
+            display: flex; justify-content: center; align-items: center;
+            color: #565f89; font-size: 1.2rem; transition: 0.2s;
+        }
+        .sign-slot.drag-target { border-color: var(--accent-green); box-shadow: 0 0 10px var(--accent-green); }
         
-        /* --- CUBES --- */
+        /* --- CUBES & SIGNS --- */
         .cube {
             width: 82px; height: 82px; border-radius: 8px;
             display: flex; flex-direction: column; justify-content: center; align-items: center;
-            font-weight: bold; box-shadow: 0 5px 10px rgba(0,0,0,0.4); cursor: grab; z-index: 20;
-            pointer-events: auto;
+            font-weight: bold; box-shadow: 0 5px 10px rgba(0,0,0,0.4); cursor: grab; z-index: 20; pointer-events: auto;
         }
         .cube.source { background: var(--accent-gold); color: #1a1b26; border: 2px solid #ff9e64; cursor: pointer; }
         .cube.source:active { transform: scale(0.95); }
-        .cube.adder { background: var(--accent-blue); color: #1a1b26; border: 2px solid #7dcfff; }
-        .cube.mult { background: var(--accent-red); color: #1a1b26; border: 2px solid #ff9e64; }
-        .cube-main-val { font-size: 1.4rem; }
-        .cube-sub { font-size: 0.7rem; opacity: 0.8; text-transform: uppercase; }
+        
+        .cube.constant { background: var(--accent-blue); color: #1a1b26; border: 2px solid #7dcfff; }
+        .cube.variable { background: var(--accent-cyan); color: #1a1b26; border: 2px solid #b4befe; opacity: 0.9; }
+
+        .sign-item {
+            width: 36px; height: 36px; border-radius: 6px;
+            display: flex; justify-content: center; align-items: center;
+            font-weight: bold; font-size: 1.5rem; cursor: grab; pointer-events: auto;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.5);
+        }
+        .sign-item.plus { background: var(--accent-green); color: #1a1b26; }
+        .sign-item.mult { background: var(--accent-red); color: #1a1b26; }
+
+        .cube-val { font-size: 1.5rem; }
+        .cube-lbl { font-size: 0.6rem; text-transform: uppercase; opacity: 0.7; }
+
+        .expand-btn {
+            width: 30px; height: 30px; background: #24283b;
+            border: 2px dashed #565f89; border-radius: 50%;
+            color: #565f89; font-size: 1.2rem; display: flex; justify-content: center; align-items: center;
+            cursor: pointer; position: absolute; z-index: 15;
+        }
+        .expand-btn:hover { background: var(--accent-green); color: #1a1b26; border-color: var(--accent-green); }
+        .expand-cost { pointer-events: none; position: absolute; top: -20px; font-size: 0.7rem; color: #1a1b26; background: var(--accent-green); padding: 2px 4px; border-radius: 4px; font-weight: bold;}
 
         /* --- DOCK --- */
         .shop-dock {
-            height: 130px;
-            background: #16161e; border-top: 1px solid #414868;
-            display: flex; justify-content: center; align-items: center; gap: 30px; z-index: 100;
-            box-shadow: 0 -5px 25px rgba(0,0,0,0.6);
-            flex-shrink: 0;
+            height: 140px; background: #16161e; border-top: 1px solid #414868;
+            display: flex; justify-content: center; align-items: center; gap: 20px; z-index: 100; flex-shrink: 0;
         }
-        .shop-item { display: flex; flex-direction: column; align-items: center; cursor: grab; transition: transform 0.1s; }
+        .shop-group {
+            display: flex; gap: 15px; padding: 0 20px;
+            border-right: 1px solid #292e42;
+        }
+        .shop-group:last-child { border-right: none; }
+        .shop-label { position: absolute; bottom: 5px; font-size: 0.7rem; color: #565f89; text-transform: uppercase; letter-spacing: 1px; width: 100%; text-align: center; }
+        
+        .shop-item { display: flex; flex-direction: column; align-items: center; cursor: grab; position: relative; transition: transform 0.1s; }
         .shop-item:hover { transform: translateY(-5px); }
+        
         .shop-icon {
-            width: 60px; height: 60px; border-radius: 8px; display: flex; justify-content: center; align-items: center;
-            font-weight: bold; color: #1a1b26; font-size: 1.5rem; margin-bottom: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+            width: 50px; height: 50px; border-radius: 8px; display: flex; justify-content: center; align-items: center;
+            font-weight: bold; color: #1a1b26; font-size: 1.2rem; margin-bottom: 5px; box-shadow: 0 4px 6px rgba(0,0,0,0.3);
         }
-        .cost-pill { background: #24283b; color: var(--accent-gold); padding: 4px 10px; border-radius: 12px; font-size: 0.85rem; font-weight: bold; border: 1px solid #414868; }
+        .cost-pill { background: #24283b; color: var(--accent-gold); padding: 2px 8px; border-radius: 10px; font-size: 0.75rem; font-weight: bold; border: 1px solid #414868; }
 
         /* --- MENU --- */
         .menu-overlay {
             position: absolute; top: 0; left: 0; height: 100vh; width: 350px;
-            background: #16161e;
-            border-right: 1px solid #414868;
-            transform: translateX(-100%);
-            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            z-index: 200;
-            display: flex; flex-direction: column;
-            box-shadow: 5px 0 30px rgba(0,0,0,0.5);
+            background: #16161e; border-right: 1px solid #414868;
+            transform: translateX(-100%); transition: transform 0.3s; z-index: 200;
+            display: flex; flex-direction: column; box-shadow: 5px 0 30px rgba(0,0,0,0.5);
         }
         .menu-overlay.open { transform: translateX(0); }
         .menu-header { padding: 20px; border-bottom: 1px solid #414868; display: flex; justify-content: space-between; align-items: center; }
@@ -161,7 +160,6 @@
         .eq-box { background: #0f0f14; padding: 15px; border-radius: 8px; font-family: monospace; color: var(--accent-green); font-size: 0.85rem; white-space: pre-wrap; word-break: break-all; margin-bottom: 20px; border: 1px dashed #414868; }
         .full-btn { width: 100%; padding: 12px; margin-bottom: 10px; background: #24283b; border: 1px solid #414868; color: var(--text); border-radius: 6px; cursor: pointer; text-align: left; display: flex; justify-content: space-between; }
         .full-btn:hover { background: #414868; }
-        .full-btn span { color: var(--accent-gold); }
 
     </style>
 </head>
@@ -170,15 +168,12 @@
     <div class="hud-top">
         <div class="hud-left">
             <button class="icon-btn" onclick="toggleMenu()">☰</button>
-            <button id="boost-btn" class="icon-btn" onclick="activateBoost()">
-                🚀
-            </button>
+            <button id="boost-btn" class="icon-btn" onclick="activateBoost()">🚀</button>
         </div>
-        <div class="hud-right">
-            <div class="score-box">
-                <div id="score" class="score-val">0</div>
-                <div id="rate" class="rate-val">Yield: 1</div>
-            </div>
+        <div class="score-box">
+            <div id="score" class="score-val">0</div>
+            <div id="rate" class="rate-val">Yield: 1</div>
+            <div id="sec-rate" class="sec-val">0 / sec</div>
         </div>
     </div>
 
@@ -189,8 +184,8 @@
         </div>
         <div class="menu-content">
             <div style="margin-bottom: 30px;">
-                <div style="font-size: 0.75rem; color: #565f89; margin-bottom: 10px; font-weight: bold;">EQUATION</div>
-                <div class="eq-box" id="equation-text">(Source)</div>
+                <div style="font-size: 0.75rem; color: #565f89; margin-bottom: 10px; font-weight: bold;">MATH LOGIC</div>
+                <div class="eq-box" id="equation-text">Waiting for input...</div>
             </div>
             <div style="margin-bottom: 30px;">
                 <div style="font-size: 0.75rem; color: #565f89; margin-bottom: 10px; font-weight: bold;">UPGRADES</div>
@@ -199,11 +194,8 @@
                     <span id="auto-rate-cost">$500</span>
                 </button>
             </div>
-            <div>
-                <div style="font-size: 0.75rem; color: #565f89; margin-bottom: 10px; font-weight: bold;">SYSTEM</div>
-                <button class="full-btn" onclick="saveGame()">Save Game</button>
-                <button class="full-btn" style="border-color: #f7768e; color: #f7768e;" onclick="resetGame()">Reset Factory</button>
-            </div>
+            <button class="full-btn" onclick="saveGame()">Save Game</button>
+            <button class="full-btn" style="border-color: #f7768e; color: #f7768e;" onclick="resetGame()">Reset</button>
         </div>
     </div>
 
@@ -212,32 +204,44 @@
     </div>
 
     <div class="shop-dock">
-        <div class="shop-item" draggable="true" ondragstart="dragStartShop(event, 'adder')">
-            <div class="shop-icon" style="background: var(--accent-blue);">+</div>
-            <span class="cost-pill" id="cost-adder">25</span>
+        <div class="shop-group">
+            <div class="shop-item" draggable="true" ondragstart="dragStartShop(event, 'constant')">
+                <div class="shop-icon" style="background: var(--accent-blue);">#</div>
+                <span class="cost-pill" id="cost-constant">25</span>
+                <span style="font-size: 0.6rem; color: #565f89; margin-top:2px;">CONST</span>
+            </div>
+            <div class="shop-item" draggable="true" ondragstart="dragStartShop(event, 'variable')">
+                <div class="shop-icon" style="background: var(--accent-cyan);">V</div>
+                <span class="cost-pill" id="cost-variable">100</span>
+                <span style="font-size: 0.6rem; color: #565f89; margin-top:2px;">VAR</span>
+            </div>
         </div>
-        <div class="shop-item" draggable="true" ondragstart="dragStartShop(event, 'mult')">
-            <div class="shop-icon" style="background: var(--accent-red);">x</div>
-            <span class="cost-pill" id="cost-mult">100</span>
+        
+        <div class="shop-group">
+            <div class="shop-item" draggable="true" ondragstart="dragStartShop(event, 'plus')">
+                <div class="shop-icon" style="background: var(--accent-green); width: 40px; height: 40px; font-size: 1.2rem;">+</div>
+                <span class="cost-pill" id="cost-plus">10</span>
+            </div>
+            <div class="shop-item" draggable="true" ondragstart="dragStartShop(event, 'mult')">
+                <div class="shop-icon" style="background: var(--accent-red); width: 40px; height: 40px; font-size: 1.2rem;">x</div>
+                <span class="cost-pill" id="cost-mult">50</span>
+            </div>
         </div>
     </div>
 
     <script>
-        const CELL_SIZE = 120; 
-        const CENTER_X = 10000; 
-        const CENTER_Y = 5000; 
-        const STATS = { adder: { base: 1, growth: 1 }, mult: { base: 1.1, growth: 0.1 } };
-        const BOOST_DURATION = 30000; 
-        const BOOST_COOLDOWN = 1800000;
+        const CELL_SIZE = 120;
+        const CENTER_X = 10000;
+        const CENTER_Y = 5000;
+        const STATS = { constant: { base: 1, growth: 1 }, variable: { base: 0, growth: 0 } };
+        const BOOST_DURATION = 30000; const BOOST_COOLDOWN = 1800000;
 
         let game = {
             score: 0,
-            costs: { adder: 25, mult: 100 },
-            // CHANGED: autoMult instead of autoRate
-            autoMult: 0.5, 
-            autoCost: 500,
-            lastBoost: 0,
-            grid: { "0,0": { unlocked: true, cube: { type: 'source', level: 1 } } }
+            costs: { constant: 25, variable: 100, plus: 10, mult: 50 },
+            autoMult: 0.5, autoCost: 500, lastBoost: 0,
+            grid: { "0,0": { unlocked: true, cube: { type: 'source', level: 1 } } },
+            signs: {} // Key: "x,y|h" (horizontal input) or "x,y|v" (vertical input)
         };
 
         let boostActive = false;
@@ -247,44 +251,38 @@
             viewport: document.getElementById('viewport'),
             score: document.getElementById('score'),
             rate: document.getElementById('rate'),
+            secRate: document.getElementById('sec-rate'),
             eqText: document.getElementById('equation-text'),
             boostBtn: document.getElementById('boost-btn'),
             menu: document.getElementById('menu'),
             autoDesc: document.getElementById('auto-rate-desc'),
             autoCost: document.getElementById('auto-rate-cost'),
-            costs: { adder: document.getElementById('cost-adder'), mult: document.getElementById('cost-mult') }
+            costs: { 
+                constant: document.getElementById('cost-constant'), 
+                variable: document.getElementById('cost-variable'),
+                plus: document.getElementById('cost-plus'),
+                mult: document.getElementById('cost-mult')
+            }
         };
 
-        // --- OPTIMIZED GAME LOOP (1 Second Tick) ---
+        // --- GAME LOOP (1 Sec) ---
         setInterval(() => {
-            // Calculate Base Yield
             let yieldVal = calculateYield();
-            
-            // Apply Auto Multiplier
-            let totalToAdd = yieldVal * game.autoMult;
+            let totalPerSec = yieldVal * game.autoMult;
+            if(boostActive) totalPerSec *= 10;
 
-            // Apply Boost (10x Multiplier) if active
-            if(boostActive) {
-                totalToAdd *= 10;
-            }
-
-            // Add to score
-            if (totalToAdd > 0) {
-                game.score += totalToAdd;
-                
-                // Visual pop
+            if(totalPerSec > 0) {
+                game.score += totalPerSec;
                 const src = document.querySelector('.cube.source');
                 if(src) { src.style.transform = "scale(0.95)"; setTimeout(()=>src.style.transform="scale(1)", 100); }
-                
                 updateUI();
             }
-
             updateBoostBtn();
+        }, 1000);
 
-        }, 1000); // Runs once every 1000ms (1 second)
-
-        // --- LOGIC ---
+        // --- MATH ENGINE ---
         function calculateYield() {
+            // Sort Columns
             let cols = {};
             let minX = 0;
             for(let k in game.grid) {
@@ -294,46 +292,67 @@
                 if(x < minX) minX = x;
             }
 
-            let flow = 0;
-            for(let x=minX; x<=0; x++) {
-                if(!cols[x]) continue;
+            // Recursive Calculator
+            // We calculate the value "Emitted" by a node at x,y
+            // Start at 0,0 (Source) which collects from its inputs.
+            
+            // Simplified Flow:
+            // 1. Calculate values of nodes from left-most to right.
+            // 2. We need a stored value for each node for this tick.
+            let nodeValues = {};
+
+            for (let x = minX; x <= 0; x++) {
+                if (!cols[x]) continue;
+                // Sort Top to Bottom for processing order
                 cols[x].sort((a,b) => b.y - a.y);
-                let branchAdd=0, branchMult=1, main=null;
                 
                 cols[x].forEach(n => {
-                    if(!n.cube) return;
-                    if(n.y > 0) {
-                         let p = getPower(n.cube);
-                         if(n.cube.type==='mult') branchMult *= p; else branchAdd += p;
-                    } else if(n.y === 0) main = n.cube;
-                });
+                    let y = n.y;
+                    if(!n.cube) return; // Empty slot
+                    
+                    let key = `${x},${y}`;
+                    
+                    // 1. Get Self Value
+                    let selfVal = 0;
+                    if (n.cube.type === 'source') selfVal = 1;
+                    else if (n.cube.type === 'constant') selfVal = n.cube.level;
+                    else if (n.cube.type === 'variable') selfVal = 0; // Vars are pass-through mostly
 
-                if(main) {
-                    if(main.type==='source') flow += main.level;
-                    else {
-                        let base = getPower(main);
-                        let effect = (base + branchAdd) * branchMult;
-                        if(main.type==='mult') flow *= effect; else flow += effect;
+                    // 2. Get Input from Left (Horizontal)
+                    let leftKey = `${x-1},${y}`;
+                    let leftVal = nodeValues[leftKey] || 0;
+                    let signH = game.signs[`${key}|h`];
+                    
+                    // Apply Horizontal Sign
+                    let hResult = 0;
+                    if (n.cube.type === 'variable') {
+                        // Variable logic: Pass through input. 
+                        // If no sign, input is blocked (0).
+                        if(signH === 'plus') hResult = leftVal;
+                        else if(signH === 'mult') hResult = leftVal;
+                        else hResult = 0; // Broken connection
+                    } else {
+                        // Constant/Source logic: Combine Input with Self
+                        if(signH === 'plus') hResult = leftVal + selfVal;
+                        else if(signH === 'mult') hResult = leftVal * selfVal;
+                        else hResult = selfVal; // No input, just self
                     }
-                }
+
+                    // 3. Get Input from Top (Vertical)
+                    let topKey = `${x},${y+1}`;
+                    let topVal = nodeValues[topKey] || 0;
+                    let signV = game.signs[`${key}|v`];
+
+                    // Apply Vertical Sign (combining with the H-Result)
+                    let finalRes = hResult;
+                    if(signV === 'plus') finalRes += topVal;
+                    else if(signV === 'mult') finalRes *= topVal;
+
+                    nodeValues[key] = finalRes;
+                });
             }
-            return flow;
-        }
 
-        function getEquationString() {
-            return `Yield: ${calculateYield().toFixed(1)}`; 
-        }
-
-        function getPower(c) {
-            if(c.type==='adder') return STATS.adder.base + (STATS.adder.growth*(c.level-1));
-            if(c.type==='mult') return STATS.mult.base + (STATS.mult.growth*(c.level-1));
-            return c.level;
-        }
-
-        function getExpCost(x,y) {
-            let base = 50;
-            if(y===0) return Math.floor(base * Math.pow(Math.abs(x), 1.5)) + base;
-            return Math.floor(base * Math.pow(y+1, 2.8));
+            return nodeValues["0,0"] || 1; // Default to 1 if something breaks
         }
 
         // --- INTERACTION ---
@@ -342,80 +361,162 @@
             if(game.score >= cost) {
                 game.score -= cost;
                 game.grid[`${x},${y}`] = {unlocked:true, cube:null};
-                renderWorld();
-                updateUI();
+                renderWorld(); updateUI();
+            }
+        }
+        function getExpCost(x,y) {
+            let base = 50;
+            if(y===0) return Math.floor(base * Math.pow(Math.abs(x), 1.5)) + base;
+            return Math.floor(base * Math.pow(y+1, 2.8));
+        }
+
+        function manualClick() {
+            let val = calculateYield();
+            game.score += val;
+            const src = document.querySelector('.cube.source');
+            if(src) { src.style.transform = "scale(0.9)"; setTimeout(()=>src.style.transform="scale(1)", 100); }
+            updateUI();
+        }
+
+        // --- DRAG & DROP ---
+        function dragStartShop(e, type) { e.dataTransfer.setData('src', 'shop'); e.dataTransfer.setData('type', type); }
+        
+        function handleDrop(e, x, y, isSign, dir) {
+            e.preventDefault();
+            e.target.classList.remove('drag-target');
+            let src = e.dataTransfer.getData('src');
+            let type = e.dataTransfer.getData('type');
+
+            if(src === 'shop') {
+                // Is this a sign or a number?
+                let isShopSign = (type === 'plus' || type === 'mult');
+                
+                if (isSign && !isShopSign) return; // Can't put number in sign slot
+                if (!isSign && isShopSign) return; // Can't put sign in number slot
+
+                let cost = game.costs[type];
+                
+                if (isSign) {
+                    // Place Sign
+                    let key = `${x},${y}|${dir}`;
+                    if(game.score >= cost) {
+                        game.score -= cost;
+                        game.signs[key] = type;
+                        renderWorld(); updateUI();
+                    }
+                } else {
+                    // Place Number
+                    let cell = game.grid[`${x},${y}`];
+                    // Upgrade logic
+                    if(cell.cube && cell.cube.type === type && type === 'constant') {
+                        if(game.score >= cost) {
+                            game.score -= cost;
+                            game.costs[type] = Math.ceil(game.costs[type]*1.3);
+                            cell.cube.level++;
+                            renderWorld(); updateUI();
+                        }
+                    } else if (!cell.cube && game.score >= cost) {
+                        game.score -= cost;
+                        game.costs[type] = Math.ceil(game.costs[type]*1.3);
+                        cell.cube = {type, level:1};
+                        renderWorld(); updateUI();
+                    }
+                }
             }
         }
 
-        function upgradeAutoMult() {
-            if(game.score >= game.autoCost) {
-                game.score -= game.autoCost;
-                game.autoMult *= 2; // Doubles the multiplier
-                game.autoCost *= 3;
-                updateUI();
-            }
-        }
-
-        function activateBoost() {
-            if(boostActive || Date.now() - game.lastBoost < BOOST_COOLDOWN) return;
-            game.lastBoost = Date.now();
-            boostActive = true;
-            ui.boostBtn.classList.add('active');
-            // Just update UI state, the loop handles the math
-            setTimeout(() => { boostActive = false; ui.boostBtn.classList.remove('active'); updateBoostBtn(); }, BOOST_DURATION);
-        }
-
-        function updateBoostBtn() {
-            if(boostActive) { ui.boostBtn.innerHTML = "🚀 ACTIVE!"; return; }
-            let rem = BOOST_COOLDOWN - (Date.now() - game.lastBoost);
-            if(rem <= 0) { ui.boostBtn.disabled=false; ui.boostBtn.innerHTML="🚀 BOOST"; }
-            else { ui.boostBtn.disabled=true; ui.boostBtn.innerHTML=`⏳ ${Math.ceil(rem/60000)}m`; }
-        }
-
-        function toggleMenu() {
-            ui.menu.classList.toggle('open');
-            if(ui.menu.classList.contains('open')) ui.eqText.innerText = `Current Yield: ${calculateYield().toFixed(2)}`;
-        }
-
+        // --- RENDER ---
         function renderWorld() {
             ui.world.innerHTML = '';
             
-            // Render Slots
             for(let k in game.grid) {
                 let [x,y] = k.split(',').map(Number);
                 let cell = game.grid[k];
-                
+
+                // 1. NODE SLOT
                 let wrap = document.createElement('div');
                 wrap.className = 'node-wrapper';
                 wrap.style.left = (CENTER_X + (x*CELL_SIZE)) + 'px';
                 wrap.style.bottom = (CENTER_Y + (y*CELL_SIZE)) + 'px';
-                
+
                 let slot = document.createElement('div');
                 slot.className = 'slot';
-                if(y===0 && x!==0) slot.classList.add('arrow-right');
-                if(y>0) slot.classList.add('arrow-down');
-                
-                // EVENTS
                 slot.ondragover = (e) => { e.preventDefault(); slot.classList.add('drag-target'); };
                 slot.ondragleave = () => slot.classList.remove('drag-target');
-                slot.ondrop = (e) => handleDrop(e, x, y);
+                slot.ondrop = (e) => handleDrop(e, x, y, false);
 
                 if(cell.cube) {
                     let c = document.createElement('div');
                     c.className = `cube ${cell.cube.type}`;
                     c.draggable = cell.cube.type !== 'source';
-                    c.ondragstart = (e) => { e.dataTransfer.setData('src','grid'); e.dataTransfer.setData('k',k); };
+                    c.ondragstart = (e) => { e.dataTransfer.setData('src','grid'); /* impl grid move later */ };
                     
-                    let txt = cell.cube.type==='source' ? "⚡" : (cell.cube.type==='adder' ? `+${getPower(cell.cube)}` : `x${getPower(cell.cube).toFixed(1)}`);
-                    c.innerHTML = `<span class="cube-main-val">${txt}</span><span class="cube-sub">Lv ${cell.cube.level}</span>`;
-                    if(cell.cube.type==='source') c.onclick = () => { game.score += calculateYield(); updateUI(); };
+                    let txt = ""; let sub = "";
+                    if(cell.cube.type==='source') { txt="⚡"; sub="End"; }
+                    else if(cell.cube.type==='constant') { txt=cell.cube.level; sub="CONST"; }
+                    else if(cell.cube.type==='variable') { txt="V"; sub="VAR"; }
+                    
+                    c.innerHTML = `<span class="cube-val">${txt}</span><span class="cube-lbl">${sub}</span>`;
+                    if(cell.cube.type==='source') c.onclick = manualClick;
                     slot.appendChild(c);
                 }
                 wrap.appendChild(slot);
                 ui.world.appendChild(wrap);
+
+                // 2. SIGN SLOT (Horizontal - Left of this node)
+                if (x !== 0 || y !== 0) { // Source 0,0 doesn't imply it has a left input necessarily, but actually it does in main line
+                    // Actually, H-slot is between (x-1) and x. 
+                    // Let's render H-Slot attached to every node except if it's far left edge? 
+                    // No, render H-slot to the LEFT of this node.
+                    let signWrapH = document.createElement('div');
+                    signWrapH.className = 'sign-wrapper';
+                    signWrapH.style.left = (CENTER_X + (x*CELL_SIZE) - 45) + 'px'; // Halfway left
+                    signWrapH.style.bottom = (CENTER_Y + (y*CELL_SIZE) + 25) + 'px'; // Centered Y
+
+                    let sSlotH = document.createElement('div');
+                    sSlotH.className = 'sign-slot';
+                    let hKey = `${x},${y}|h`;
+                    let sTypeH = game.signs[hKey];
+                    if(sTypeH) {
+                        let si = document.createElement('div');
+                        si.className = `sign-item ${sTypeH}`;
+                        si.innerHTML = sTypeH==='plus' ? '+' : 'x';
+                        sSlotH.appendChild(si);
+                    } else { sSlotH.innerHTML = "•"; }
+                    
+                    sSlotH.ondragover = (e) => { e.preventDefault(); sSlotH.classList.add('drag-target'); };
+                    sSlotH.ondragleave = () => sSlotH.classList.remove('drag-target');
+                    sSlotH.ondrop = (e) => handleDrop(e, x, y, true, 'h');
+                    signWrapH.appendChild(sSlotH);
+                    ui.world.appendChild(signWrapH);
+                }
+
+                // 3. SIGN SLOT (Vertical - Top of this node)
+                // Actually inputs come from Top (y+1) into y. So Sign is ABOVE.
+                let signWrapV = document.createElement('div');
+                signWrapV.className = 'sign-wrapper';
+                signWrapV.style.left = (CENTER_X + (x*CELL_SIZE) + 25) + 'px'; // Centered X
+                signWrapV.style.bottom = (CENTER_Y + (y*CELL_SIZE) + 95) + 'px'; // Above
+                
+                let sSlotV = document.createElement('div');
+                sSlotV.className = 'sign-slot';
+                let vKey = `${x},${y}|v`;
+                let sTypeV = game.signs[vKey];
+                if(sTypeV) {
+                    let si = document.createElement('div');
+                    si.className = `sign-item ${sTypeV}`;
+                    si.innerHTML = sTypeV==='plus' ? '+' : 'x';
+                    sSlotV.appendChild(si);
+                } else { sSlotV.innerHTML = "•"; }
+
+                sSlotV.ondragover = (e) => { e.preventDefault(); sSlotV.classList.add('drag-target'); };
+                sSlotV.ondragleave = () => sSlotV.classList.remove('drag-target');
+                sSlotV.ondrop = (e) => handleDrop(e, x, y, true, 'v');
+                signWrapV.appendChild(sSlotV);
+                ui.world.appendChild(signWrapV);
             }
 
-            // Render Expansions
+            // Expansions
             let seen = new Set(Object.keys(game.grid));
             let potential = new Set();
             for(let k in game.grid) {
@@ -423,7 +524,6 @@
                 if(y===0) potential.add(`${x-1},0`);
                 if(!(x===0 && y>=0)) potential.add(`${x},${y+1}`);
             }
-            
             potential.forEach(k => {
                 if(seen.has(k)) return;
                 let [x,y] = k.split(',').map(Number);
@@ -431,83 +531,56 @@
                 btn.className = 'expand-btn';
                 btn.innerHTML = `+<div class="expand-cost">$${getExpCost(x,y)}</div>`;
                 btn.onclick = () => unlockSlot(x,y);
-                btn.style.left = (CENTER_X + (x*CELL_SIZE)+32) + 'px';
-                btn.style.bottom = (CENTER_Y + (y*CELL_SIZE)+32) + 'px';
+                btn.style.left = (CENTER_X + (x*CELL_SIZE)+35) + 'px';
+                btn.style.bottom = (CENTER_Y + (y*CELL_SIZE)+35) + 'px';
                 ui.world.appendChild(btn);
             });
         }
 
-        // --- DRAG DROP ---
-        function dragStartShop(e, type) { e.dataTransfer.setData('src','shop'); e.dataTransfer.setData('type',type); }
-        
-        function handleDrop(e, x, y) {
-            e.preventDefault();
-            e.target.closest('.slot').classList.remove('drag-target');
-            let src = e.dataTransfer.getData('src');
-            let key = `${x},${y}`;
-            let cell = game.grid[key];
-
-            if(src === 'shop') {
-                let type = e.dataTransfer.getData('type');
-                let cost = game.costs[type];
-                
-                // Upgrade/Merge logic on buy
-                if(cell.cube && cell.cube.type === type) {
-                    if(game.score >= cost) {
-                        game.score -= cost;
-                        game.costs[type] = Math.ceil(game.costs[type]*1.3);
-                        cell.cube.level++;
-                        renderWorld(); updateUI();
-                    }
-                } else if (!cell.cube && game.score >= cost) {
-                    game.score -= cost;
-                    game.costs[type] = Math.ceil(game.costs[type]*1.3);
-                    cell.cube = {type, level:1};
-                    renderWorld(); updateUI();
-                }
-            } else if (src === 'grid') {
-                let oldK = e.dataTransfer.getData('k');
-                if(oldK === key) return;
-                let oldCell = game.grid[oldK];
-                
-                if(!cell.cube) {
-                    // Move
-                    cell.cube = oldCell.cube;
-                    oldCell.cube = null;
-                } else if (cell.cube.type === oldCell.cube.type) {
-                    // Merge
-                    cell.cube.level += oldCell.cube.level;
-                    oldCell.cube = null;
-                } else {
-                    // Swap
-                    let tmp = cell.cube;
-                    cell.cube = oldCell.cube;
-                    oldCell.cube = tmp;
-                }
-                renderWorld(); updateUI();
+        // --- SYSTEM ---
+        function upgradeAutoMult() {
+            if(game.score >= game.autoCost) {
+                game.score -= game.autoCost;
+                game.autoMult *= 2; game.autoCost *= 3; updateUI();
             }
         }
-
+        function activateBoost() {
+            if(boostActive || Date.now() - game.lastBoost < BOOST_COOLDOWN) return;
+            game.lastBoost = Date.now(); boostActive = true; ui.boostBtn.classList.add('active');
+            setTimeout(() => { boostActive = false; ui.boostBtn.classList.remove('active'); updateBoostBtn(); }, BOOST_DURATION);
+        }
+        function updateBoostBtn() {
+            if(boostActive) { ui.boostBtn.innerHTML = "🚀 ACTIVE!"; return; }
+            let rem = BOOST_COOLDOWN - (Date.now() - game.lastBoost);
+            if(rem <= 0) { ui.boostBtn.disabled=false; ui.boostBtn.innerHTML="🚀"; }
+            else { ui.boostBtn.disabled=true; ui.boostBtn.innerHTML=`${Math.ceil(rem/60000)}m`; }
+        }
         function updateUI() {
             ui.score.textContent = Math.floor(game.score);
-            ui.rate.textContent = `Yield: ${calculateYield().toFixed(1)}`;
-            ui.costs.adder.textContent = game.costs.adder;
+            let y = calculateYield();
+            ui.rate.textContent = `Yield: ${y}`;
+            let sps = y * game.autoMult * (boostActive ? 10 : 1);
+            ui.secRate.textContent = `${sps.toFixed(1)} / sec`;
+            
+            ui.costs.constant.textContent = game.costs.constant;
+            ui.costs.variable.textContent = game.costs.variable;
+            ui.costs.plus.textContent = game.costs.plus;
             ui.costs.mult.textContent = game.costs.mult;
             ui.autoDesc.textContent = `x${game.autoMult} / sec`;
             ui.autoCost.textContent = `$${game.autoCost}`;
+            
+            ui.eqText.textContent = `Formula evaluation running... \nCurrent Yield: ${y}`;
         }
-
-        function saveGame() { localStorage.setItem('FV6', JSON.stringify(game)); alert("Saved"); }
-        function resetGame() { if(confirm("Reset?")) { localStorage.removeItem('FV6'); location.reload(); } }
+        function toggleMenu() { ui.menu.classList.toggle('open'); }
+        function saveGame() { localStorage.setItem('FV7', JSON.stringify(game)); alert("Saved"); }
+        function resetGame() { if(confirm("Reset?")) { localStorage.removeItem('FV7'); location.reload(); } }
         
         window.onload = () => {
-            let d = localStorage.getItem('FV6');
+            let d = localStorage.getItem('FV7');
             if(d) game = JSON.parse(d);
-            // Default check for variable switch
-            if(game.autoMult === undefined) game.autoMult = 0.5;
-            if(!game.autoCost) game.autoCost=500;
+            if(!game.signs) game.signs = {};
+            if(!game.autoMult) game.autoMult = 0.5;
             renderWorld(); updateUI(); updateBoostBtn();
-            // Center
             ui.viewport.scrollLeft = CENTER_X - window.innerWidth/2;
             ui.viewport.scrollTop = 10000 - CENTER_Y - window.innerHeight/2;
         }
