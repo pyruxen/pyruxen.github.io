@@ -3,247 +3,216 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Fishbone Factory Idle</title>
+    <title>Infinite Factory Idle</title>
     <style>
         :root {
-            --bg-color: #1a1b26;
-            --panel-bg: #24283b;
-            --accent-gold: #e0af68;
-            --accent-blue: #7aa2f7;
-            --accent-red: #f7768e;
-            --accent-purple: #bb9af7;
-            --text-main: #c0caf5;
-            --slot-empty: #414868;
+            --bg-color: #1e1e2e;
+            --grid-line: #313244;
+            --slot-bg: #181825;
+            --text: #cdd6f4;
+            --accent-green: #a6e3a1;
+            --accent-blue: #89b4fa;
+            --accent-red: #f38ba8;
+            --accent-gold: #f9e2af;
         }
 
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-family: 'Segoe UI', sans-serif;
             background-color: var(--bg-color);
-            color: var(--text-main);
+            color: var(--text);
             margin: 0;
+            overflow: hidden;
             display: flex;
             flex-direction: column;
             height: 100vh;
-            overflow: hidden;
-            user-select: none;
         }
 
-        /* --- HEADER --- */
-        header {
-            background-color: var(--panel-bg);
-            padding: 15px 30px;
+        /* --- UI OVERLAYS --- */
+        .ui-layer {
+            position: absolute;
+            top: 0; left: 0; width: 100%;
+            pointer-events: none; /* Let clicks pass through */
+            z-index: 100;
+            padding: 20px;
+            box-sizing: border-box;
             display: flex;
             justify-content: space-between;
-            align-items: center;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
-            z-index: 10;
         }
 
-        .score-container { text-align: left; }
-        .score-val { font-size: 2.5rem; font-weight: bold; color: var(--accent-gold); line-height: 1; }
-        .score-rate { font-family: monospace; color: var(--accent-blue); font-size: 1rem; margin-top: 5px; }
-        
+        .hud-box {
+            background: rgba(30, 30, 46, 0.9);
+            padding: 15px 25px;
+            border-radius: 12px;
+            border: 1px solid #45475a;
+            pointer-events: auto;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+        }
+
+        .score-val { font-size: 2rem; font-weight: bold; color: var(--accent-gold); }
+        .rate-val { font-family: monospace; color: #bac2de; }
+
         .controls button {
-            background: #565f89; border: none; padding: 8px 15px; 
-            color: white; border-radius: 4px; cursor: pointer; margin-left: 10px;
+            background: #45475a; border: none; padding: 8px 16px; 
+            color: white; border-radius: 6px; cursor: pointer; margin-left: 5px;
         }
-        .controls button:hover { background: #7aa2f7; }
+        .controls button:hover { background: #585b70; }
 
-        /* --- MAIN SCROLLABLE AREA --- */
-        .factory-viewport {
+        /* --- THE CANVAS --- */
+        .viewport {
             flex: 1;
-            overflow-x: auto; /* Allows horizontal scrolling */
-            overflow-y: hidden;
-            display: flex;
-            align-items: center;
-            /* We use row-reverse so Source is on the Right, and we expand Leftwards */
-            flex-direction: row-reverse; 
-            padding: 50px;
-            background-image: linear-gradient(var(--bg-color) 1px, transparent 1px), linear-gradient(90deg, var(--bg-color) 1px, transparent 1px);
-            background-size: 20px 20px;
-            background-color: #16161e;
-        }
-
-        /* --- THE COLUMNS --- */
-        .column {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            margin: 0 20px;
+            overflow: scroll;
             position: relative;
-            flex-shrink: 0; /* Prevents squishing */
+            cursor: grab;
+            background-image: 
+                linear-gradient(var(--grid-line) 1px, transparent 1px), 
+                linear-gradient(90deg, var(--grid-line) 1px, transparent 1px);
+            background-size: 40px 40px;
+        }
+        
+        .viewport:active { cursor: grabbing; }
+
+        .world-container {
+            position: relative;
+            width: 8000px; /* Huge world */
+            height: 4000px;
         }
 
-        /* Connector Lines */
-        .column:not(:first-child)::after {
-            content: "➜"; /* Arrow pointing right (towards source in row-reverse) */
+        /* --- GRID ITEMS --- */
+        .node-wrapper {
             position: absolute;
-            top: 135px; /* Aligns with bottom row */
-            right: -30px;
-            font-size: 2rem;
-            color: #565f89;
-            z-index: 0;
-        }
-
-        .branch-connector {
-            width: 4px;
-            height: 30px;
-            background-color: #565f89;
-            margin: 5px 0;
-            opacity: 0.3;
-        }
-        .branch-connector.active { opacity: 1; background-color: var(--accent-purple); }
-
-        /* --- SLOTS --- */
-        .slot {
             width: 100px;
             height: 100px;
-            background-color: var(--slot-empty);
-            border-radius: 12px;
-            border: 2px dashed #565f89;
             display: flex;
             justify-content: center;
             align-items: center;
-            position: relative;
-            transition: all 0.2s;
+            transition: transform 0.2s;
         }
 
-        .slot.drag-over { background-color: #7aa2f7; border-color: white; transform: scale(1.1); }
-        .slot.is-branch { border-color: var(--accent-purple); opacity: 0.6; }
-        .slot.is-branch:hover { opacity: 1; }
-        
-        .slot-label {
+        .slot {
+            width: 90px;
+            height: 90px;
+            background: var(--slot-bg);
+            border: 2px solid #45475a;
+            border-radius: 12px;
+            position: relative;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .slot.drag-target { border-color: var(--accent-blue); box-shadow: 0 0 15px var(--accent-blue); }
+
+        /* Connection Arrows */
+        .arrow-right::after {
+            content: "➜"; position: absolute; right: -25px; 
+            color: #45475a; font-size: 1.5rem; z-index: 0;
+        }
+        .arrow-down::after {
+            content: "⬇"; position: absolute; bottom: -25px; 
+            color: #45475a; font-size: 1.5rem; z-index: 0;
+        }
+
+        /* Expand Button (+) */
+        .expand-btn {
+            width: 40px; height: 40px;
+            background: #313244;
+            border: 2px dashed var(--accent-green);
+            border-radius: 50%;
+            color: var(--accent-green);
+            font-size: 1.5rem;
+            display: flex; justify-content: center; align-items: center;
+            cursor: pointer;
+            transition: all 0.2s;
             position: absolute;
-            bottom: -25px;
-            font-size: 0.8rem;
-            color: #565f89;
-            text-transform: uppercase;
-            font-weight: bold;
+        }
+        .expand-btn:hover { background: var(--accent-green); color: #1e1e2e; transform: scale(1.1); }
+        .expand-cost { 
+            position: absolute; top: -20px; font-size: 0.7rem; 
+            color: var(--accent-green); font-weight: bold; background: #1e1e2e; padding: 2px 4px; border-radius: 4px;
         }
 
         /* --- CUBES --- */
         .cube {
-            width: 90px;
-            height: 90px;
-            border-radius: 10px;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.5);
+            width: 80px; height: 80px;
+            border-radius: 8px;
+            display: flex; flex-direction: column; 
+            justify-content: center; align-items: center;
             font-weight: bold;
-            z-index: 2;
-            cursor: grab;
-            position: relative;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.4);
+            cursor: grab; z-index: 2;
         }
-        
         .cube:active { cursor: grabbing; }
 
-        .cube.source { background: var(--accent-gold); color: #1a1b26; border: 2px solid #ff9e64; cursor: pointer; }
+        .cube.source { background: var(--accent-gold); color: #1e1e2e; border: 2px solid #f9c096; cursor: pointer; }
         .cube.source:active { transform: scale(0.95); }
+        .cube.adder { background: var(--accent-blue); color: #1e1e2e; border: 2px solid #b4befe; }
+        .cube.mult { background: var(--accent-red); color: #1e1e2e; border: 2px solid #eba0ac; }
 
-        .cube.adder { background: var(--accent-blue); color: #1a1b26; border: 2px solid #7dcfff; }
-        .cube.mult { background: var(--accent-red); color: #1a1b26; border: 2px solid #ff9e64; }
+        .lvl-badge { position: absolute; top: 2px; right: 2px; font-size: 0.7rem; background: rgba(0,0,0,0.2); padding: 2px 4px; border-radius: 4px; color: white; }
 
-        .cube-val { font-size: 1.5rem; }
-        .cube-type { font-size: 0.7rem; text-transform: uppercase; opacity: 0.8; }
-        .cube-lvl { position: absolute; top: 4px; right: 4px; background: rgba(0,0,0,0.3); color: white; font-size: 0.6rem; padding: 2px 4px; border-radius: 4px; }
-
-        /* --- DRAG SHOP (BOTTOM DOCK) --- */
+        /* --- BOTTOM DOCK --- */
         .shop-dock {
-            height: 160px;
-            background-color: var(--panel-bg);
-            border-top: 4px solid #16161e;
-            display: flex;
-            align-items: center;
-            padding: 0 40px;
-            gap: 40px;
-            box-shadow: 0 -5px 20px rgba(0,0,0,0.3);
+            position: absolute; bottom: 0; left: 0; width: 100%;
+            height: 140px;
+            background: var(--grid-line);
+            border-top: 1px solid #45475a;
+            display: flex; justify-content: center; align-items: center; gap: 40px;
+            z-index: 100;
+            box-shadow: 0 -5px 20px rgba(0,0,0,0.5);
         }
 
         .shop-item {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            cursor: grab;
-            transition: transform 0.2s;
-            position: relative;
+            display: flex; flex-direction: column; align-items: center;
+            cursor: grab; transition: transform 0.1s;
         }
         .shop-item:hover { transform: translateY(-5px); }
-        .shop-item:active { cursor: grabbing; }
-
-        .shop-preview {
-            width: 70px;
-            height: 70px;
-            border-radius: 8px;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            margin-bottom: 10px;
-            font-weight: bold;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
-        }
         
-        .cost-tag {
-            background-color: #16161e;
-            padding: 4px 8px;
-            border-radius: 4px;
-            color: var(--accent-gold);
-            font-weight: bold;
-            font-size: 0.9rem;
+        .shop-icon {
+            width: 60px; height: 60px; border-radius: 8px;
+            display: flex; justify-content: center; align-items: center;
+            font-weight: bold; color: #1e1e2e; font-size: 1.2rem;
+            margin-bottom: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.3);
         }
-        
-        .dock-separator { width: 1px; height: 60%; background: #565f89; }
 
-        .shop-btn {
-            background: #414868; color: white; border: none; padding: 10px 20px;
-            border-radius: 8px; cursor: pointer; font-size: 1rem;
-            display: flex; flex-direction: column; align-items: center;
-        }
-        .shop-btn:hover { background: #565f89; }
-        .shop-btn small { color: var(--accent-gold); margin-top: 5px; }
+        .cost-pill { background: #1e1e2e; color: var(--accent-gold); padding: 4px 8px; border-radius: 10px; font-size: 0.8rem; font-weight: bold; }
 
     </style>
 </head>
 <body>
 
-    <header>
-        <div class="score-container">
+    <div class="ui-layer">
+        <div class="hud-box">
             <div id="score" class="score-val">0</div>
-            <div id="rate" class="score-rate">Per Click: 1</div>
+            <div id="rate" class="rate-val">Yield: 1</div>
         </div>
-        <div class="controls">
+        <div class="hud-box controls">
             <button onclick="saveGame()">Save</button>
             <button onclick="resetGame()">Reset</button>
         </div>
-    </header>
+    </div>
 
-    <div class="factory-viewport" id="chain-container">
-        </div>
+    <div class="viewport" id="viewport">
+        <div class="world-container" id="world">
+            </div>
+    </div>
 
     <div class="shop-dock">
-        
-        <div class="shop-item" draggable="true" ondragstart="dragStart(event, 'adder')">
-            <div class="shop-preview" style="background: var(--accent-blue); color: #1a1b26;">+</div>
-            <span class="cost-tag" id="cost-adder">$25</span>
+        <div class="shop-item" draggable="true" ondragstart="dragStartShop(event, 'adder')">
+            <div class="shop-icon" style="background: var(--accent-blue);">+</div>
+            <span class="cost-pill" id="cost-adder">25</span>
         </div>
-
-        <div class="shop-item" draggable="true" ondragstart="dragStart(event, 'mult')">
-            <div class="shop-preview" style="background: var(--accent-red); color: #1a1b26;">x</div>
-            <span class="cost-tag" id="cost-mult">$100</span>
+        <div class="shop-item" draggable="true" ondragstart="dragStartShop(event, 'mult')">
+            <div class="shop-icon" style="background: var(--accent-red);">x</div>
+            <span class="cost-pill" id="cost-mult">100</span>
         </div>
-
-        <div class="dock-separator"></div>
-
-        <button class="shop-btn" onclick="buyExpansion()">
-            Extend Line
-            <small id="cost-expand">$50</small>
-        </button>
-
     </div>
 
     <script>
-        // --- CONSTANTS ---
+        // --- CONFIG ---
+        const CELL_SIZE = 120; // 100px box + 20px gap
+        const CENTER_X = 4000; // Middle of the 8000px world
+        const CENTER_Y = 2000; // Middle of the 4000px world
+        
         const STATS = {
             adder: { base: 1, growth: 1 },
             mult: { base: 1.1, growth: 0.1 }
@@ -252,310 +221,352 @@
         // --- GAME STATE ---
         let game = {
             score: 0,
-            expandCost: 50,
-            costs: { adder: 25, mult: 100 },
+            costs: { adder: 25, mult: 100, expand: 50 },
             
-            // The Chain is an array of Columns.
-            // Index 0 is the Source (Rightmost). Index 1 is the first machine, etc.
-            chain: [
-                { id: 'source', main: { type: 'source', level: 1 }, branch: null }
-            ]
+            // "x,y": { unlocked: true, cube: { type, level } }
+            // Coordinate 0,0 is the Source.
+            // X decreases Left (Main Line). Y increases Up (Branches).
+            grid: {
+                "0,0": { unlocked: true, cube: { type: 'source', level: 1 } }
+            }
         };
 
-        // --- UI REFERENCES ---
+        // --- UI REFS ---
         const ui = {
+            world: document.getElementById('world'),
+            viewport: document.getElementById('viewport'),
             score: document.getElementById('score'),
             rate: document.getElementById('rate'),
-            container: document.getElementById('chain-container'),
             costs: {
                 adder: document.getElementById('cost-adder'),
-                mult: document.getElementById('cost-mult'),
-                expand: document.getElementById('cost-expand')
+                mult: document.getElementById('cost-mult')
             }
         };
 
-        // --- CORE LOGIC ---
+        // --- MATH LOGIC ---
 
-        function calculateChain() {
-            // Start with Source Base Value
-            let totalPerClick = game.chain[0].main.level; // Source Level = Base Value
+        function calculateYield() {
+            // We need to traverse the graph.
+            // Logic: 
+            // 1. Calculate values of Vertical columns first (Branches)
+            // 2. Feed those into the Main Line (Horizontal)
             
-            // Iterate backwards from the end of the array (Leftmost items) towards 0 (Source)
-            // Or forwards? In logic: Slot 2 feeds Slot 1 feeds Source.
-            // We apply math sequentially.
-            
-            // Let's model it: Flow Value accumulates as we walk towards Source.
-            // But usually in these games, modifiers act on the Source's base.
-            // Let's try: Source generates X. Slot 1 modifies X. Slot 2 modifies result.
-            // Wait, the visual flow is Left -> Right -> Source.
-            // So Slot N (Far Left) starts the chain? Or does Source pull?
-            
-            // Let's do "Pull" logic.
-            // Source produces Base.
-            // Slot 1 (closest) modifies that.
-            // Slot 2 modifies that result.
-            
-            for (let i = 1; i < game.chain.length; i++) {
-                const col = game.chain[i];
-                if (!col.main) continue; // Empty slot, ignore
-
-                // 1. Calculate the power of this Main Node
-                let nodePower = 0; 
-                let nodeIsMult = false;
-
-                if (col.main.type === 'adder') {
-                    nodePower = STATS.adder.base + (STATS.adder.growth * (col.main.level - 1));
-                    nodeIsMult = false;
-                } else if (col.main.type === 'mult') {
-                    nodePower = STATS.mult.base + (STATS.mult.growth * (col.main.level - 1));
-                    nodeIsMult = true;
-                }
-
-                // 2. Check for Branch (Modifier)
-                if (col.branch) {
-                    let branchPower = 0;
-                    // Branch logic: Modifies the Node Power
-                    if (col.branch.type === 'adder') {
-                        branchPower = STATS.adder.base + (STATS.adder.growth * (col.branch.level - 1));
-                        nodePower += branchPower; // Add to the main node's power
-                    } else if (col.branch.type === 'mult') {
-                        branchPower = STATS.mult.base + (STATS.mult.growth * (col.branch.level - 1));
-                        nodePower *= branchPower; // Multiply the main node's power
-                    }
-                }
-
-                // 3. Apply Main Node to Total Flow
-                if (nodeIsMult) {
-                    totalPerClick *= nodePower;
-                } else {
-                    totalPerClick += nodePower;
-                }
+            // Group nodes by X coordinate
+            let columns = {};
+            for (let key in game.grid) {
+                let [x, y] = key.split(',').map(Number);
+                if (!columns[x]) columns[x] = [];
+                columns[x].push({ y, data: game.grid[key] });
             }
 
-            return totalPerClick;
+            // Find min X (start of chain) to 0 (Source)
+            let minX = Math.min(...Object.keys(columns).map(Number));
+            
+            // The value flowing into the source starts at 0, accumulates as we go right
+            let currentFlow = 0; 
+
+            // Iterate X from Min to 0
+            for (let x = minX; x <= 0; x++) {
+                if (!columns[x]) continue;
+
+                // Process Vertical Stack for this X
+                // Sort Y descending (Top to Bottom)
+                let stack = columns[x].sort((a,b) => b.y - a.y);
+                
+                // Value coming down the branch
+                let branchFlow = 0; 
+                let mainNode = null;
+
+                stack.forEach(node => {
+                    const cube = node.data.cube;
+                    if (!cube) return;
+
+                    if (node.y > 0) {
+                        // This is a branch node. It modifies the flow coming from above.
+                        // For simplicity, let's say branches generate value downwards
+                        let power = getPower(cube);
+                        if (cube.type === 'mult') {
+                             branchFlow = (branchFlow === 0 ? 1 : branchFlow) * power;
+                        } else {
+                             branchFlow += power;
+                        }
+                    } else if (node.y === 0) {
+                        mainNode = cube;
+                    }
+                });
+
+                // Apply Branch Flow -> Main Node -> Main Stream
+                if (mainNode) {
+                    if (mainNode.type === 'source') {
+                        // Source Base + Accumulated Flow
+                        currentFlow = mainNode.level + currentFlow;
+                    } else {
+                        // This Main Node receives Branch Flow
+                        let nodeBase = getPower(mainNode);
+                        
+                        // Combine Node Base + Branch Flow
+                        let totalNodePower = nodeBase;
+                        
+                        // Interaction: If I have a branch flowing into me:
+                        if (branchFlow > 0) {
+                             if (mainNode.type === 'mult') totalNodePower *= branchFlow; // Multipliers boost the branch
+                             else totalNodePower += branchFlow; // Adders add the branch
+                        }
+
+                        // Apply to Horizontal Stream
+                        if (mainNode.type === 'mult') currentFlow *= totalNodePower;
+                        else currentFlow += totalNodePower;
+                    }
+                }
+            }
+            return currentFlow;
+        }
+
+        function getPower(cube) {
+            if (cube.type === 'adder') return STATS.adder.base + (STATS.adder.growth * (cube.level - 1));
+            if (cube.type === 'mult') return STATS.mult.base + (STATS.mult.growth * (cube.level - 1));
+            return cube.level;
         }
 
         function clickSource() {
-            const val = calculateChain();
+            let val = calculateYield();
             game.score += val;
             
-            // Animation on Source
-            const srcBtn = document.querySelector('.cube.source');
-            if(srcBtn) {
-                srcBtn.style.transform = "scale(0.9)";
-                setTimeout(() => srcBtn.style.transform = "scale(1)", 100);
+            // Anim
+            const src = document.querySelector('.cube.source');
+            if(src) {
+                src.style.transform = "scale(0.9)";
+                setTimeout(()=>src.style.transform = "scale(1)", 100);
             }
             updateUI();
         }
 
-        // --- SHOP & EXPANSION ---
+        // --- GRID MANAGEMENT ---
 
-        function buyExpansion() {
-            if (game.score >= game.expandCost) {
-                game.score -= game.expandCost;
-                game.expandCost = Math.floor(game.expandCost * 1.5);
-                
-                // Add new empty column
-                game.chain.push({ main: null, branch: null });
-                
-                renderChain();
+        function unlockSlot(x, y) {
+            if (game.score >= game.costs.expand) {
+                game.score -= game.costs.expand;
+                game.grid[`${x},${y}`] = { unlocked: true, cube: null };
+                // Increase land cost slightly?
+                // game.costs.expand += 5; 
+                renderWorld();
                 updateUI();
             }
         }
 
-        function handlePurchase(type, colIndex, isBranch) {
-            const cost = game.costs[type];
-            if (game.score < cost) return false;
+        function renderWorld() {
+            ui.world.innerHTML = '';
 
-            // Deduct Cost
-            game.score -= cost;
-            game.costs[type] = Math.ceil(game.costs[type] * 1.3);
+            // 1. Render Existing Slots
+            for (let key in game.grid) {
+                const [x, y] = key.split(',').map(Number);
+                const cell = game.grid[key];
 
-            // Create Cube
-            const newCube = { type: type, level: 1 };
-            
-            if (isBranch) {
-                game.chain[colIndex].branch = newCube;
-            } else {
-                game.chain[colIndex].main = newCube;
+                const wrapper = document.createElement('div');
+                wrapper.className = 'node-wrapper';
+                // Position logic: X negative goes left. Y positive goes up.
+                wrapper.style.left = (CENTER_X + (x * CELL_SIZE)) + 'px';
+                wrapper.style.bottom = (CENTER_Y + (y * CELL_SIZE)) + 'px';
+
+                const slot = document.createElement('div');
+                slot.className = 'slot';
+                // Add CSS arrows based on position
+                if (y === 0 && x !== 0) slot.classList.add('arrow-right'); // Main line points right
+                if (y > 0) slot.classList.add('arrow-down'); // Branches point down
+
+                // Drag Events
+                slot.ondragover = (e) => { e.preventDefault(); slot.classList.add('drag-target'); };
+                slot.ondragleave = () => slot.classList.remove('drag-target');
+                slot.ondrop = (e) => handleDrop(e, x, y);
+
+                if (cell.cube) {
+                    const cube = document.createElement('div');
+                    cube.className = `cube ${cell.cube.type}`;
+                    cube.draggable = (cell.cube.type !== 'source');
+                    cube.ondragstart = (e) => dragStartGrid(e, x, y);
+                    if (cell.cube.type === 'source') cube.onclick = clickSource;
+
+                    let txt = "";
+                    if(cell.cube.type==='source') txt = "⚡";
+                    else if(cell.cube.type==='adder') txt = "+";
+                    else if(cell.cube.type==='mult') txt = "x";
+
+                    cube.innerHTML = `<span class="lvl-badge">${cell.cube.level}</span><span>${txt}</span>`;
+                    slot.appendChild(cube);
+                }
+
+                wrapper.appendChild(slot);
+                ui.world.appendChild(wrapper);
             }
 
-            updateUI();
-            renderChain();
-            return true;
-        }
-
-        // --- DRAG AND DROP HANDLERS ---
-        
-        function dragStart(ev, type) {
-            ev.dataTransfer.setData("type", type);
-            ev.dataTransfer.effectAllowed = "copy";
-        }
-
-        function allowDrop(ev) {
-            ev.preventDefault();
-            // Optional: highlight slot
-            ev.target.closest('.slot').classList.add('drag-over');
-        }
-        
-        function dragLeave(ev) {
-            ev.target.closest('.slot').classList.remove('drag-over');
-        }
-
-        function drop(ev, colIndex, isBranch) {
-            ev.preventDefault();
-            ev.target.closest('.slot').classList.remove('drag-over');
+            // 2. Render Expansion Buttons ("+")
+            // We check every unlocked node and see if its neighbors are valid expansion spots
+            let potentialSpots = new Set();
             
-            const type = ev.dataTransfer.getData("type");
-            const targetCol = game.chain[colIndex];
-            
-            const existing = isBranch ? targetCol.branch : targetCol.main;
-
-            if (!existing) {
-                // Buy New
-                handlePurchase(type, colIndex, isBranch);
-            } else {
-                // Merge logic (if dragging same type)
-                // NOTE: This basic drag only supports Shop -> Grid. 
-                // To support Grid -> Grid merge, we need more complex dataTransfer.
-                // For now, if slot is full, do nothing (or we could implement Upgrade-by-Buying).
+            for (let key in game.grid) {
+                const [x, y] = key.split(',').map(Number);
                 
-                if (existing.type === type) {
-                    const cost = game.costs[type];
-                    if (game.score >= cost) {
-                         // Upgrade existing by paying cost
-                         game.score -= cost;
-                         game.costs[type] = Math.ceil(game.costs[type] * 1.3);
-                         existing.level++;
-                         updateUI();
-                         renderChain();
-                    }
-                }
+                // Rule 1: Expand Main Line Left (x-1, 0)
+                if (y === 0) potentialSpots.add(`${x-1},0`);
+                
+                // Rule 2: Expand Branch Up (x, y+1)
+                potentialSpots.add(`${x},${y+1}`);
             }
-        }
 
-        // --- RENDER ---
+            potentialSpots.forEach(key => {
+                if (game.grid[key]) return; // Already exists
 
-        function renderChain() {
-            ui.container.innerHTML = '';
-
-            game.chain.forEach((col, index) => {
-                const columnDiv = document.createElement('div');
-                columnDiv.className = 'column';
-
-                // 1. Branch Slot (Top)
-                const branchSlot = document.createElement('div');
-                branchSlot.className = 'slot is-branch';
-                if (index === 0) branchSlot.style.visibility = 'hidden'; // Source has no branch in this simple model
+                const [x, y] = key.split(',').map(Number);
                 
-                if (index !== 0) {
-                    branchSlot.ondragover = allowDrop;
-                    branchSlot.ondragleave = dragLeave;
-                    branchSlot.ondrop = (e) => drop(e, index, true);
-                    
-                    if (col.branch) {
-                        branchSlot.appendChild(createCubeEl(col.branch));
-                        branchSlot.style.borderStyle = "solid";
-                    } else {
-                         branchSlot.innerHTML = `<span class="slot-label">Branch</span>`;
-                    }
-                }
-
-                // 2. Connector Line
-                const connector = document.createElement('div');
-                connector.className = 'branch-connector ' + (col.branch ? 'active' : '');
-
-                // 3. Main Slot (Bottom)
-                const mainSlot = document.createElement('div');
-                mainSlot.className = 'slot';
+                const btn = document.createElement('div');
+                btn.className = 'expand-btn';
+                btn.innerHTML = "+ <span class='expand-cost'>$"+game.costs.expand+"</span>";
+                btn.onclick = () => unlockSlot(x, y);
                 
-                if (index === 0) {
-                    // Source
-                    const srcCube = createCubeEl(col.main);
-                    srcCube.onclick = clickSource;
-                    mainSlot.appendChild(srcCube);
-                    mainSlot.style.border = "none";
-                    mainSlot.style.background = "transparent";
-                } else {
-                    mainSlot.ondragover = allowDrop;
-                    mainSlot.ondragleave = dragLeave;
-                    mainSlot.ondrop = (e) => drop(e, index, false);
-
-                    if (col.main) {
-                        mainSlot.appendChild(createCubeEl(col.main));
-                        mainSlot.style.borderStyle = "solid";
-                    } else {
-                        mainSlot.innerHTML = `<span class="slot-label">Main</span>`;
-                    }
-                }
-
-                columnDiv.appendChild(branchSlot);
-                columnDiv.appendChild(connector);
-                columnDiv.appendChild(mainSlot);
-
-                ui.container.appendChild(columnDiv);
+                btn.style.left = (CENTER_X + (x * CELL_SIZE) + 30) + 'px'; // +30 to center in 100px space
+                btn.style.bottom = (CENTER_Y + (y * CELL_SIZE) + 30) + 'px';
+                
+                ui.world.appendChild(btn);
             });
         }
 
-        function createCubeEl(data) {
-            const div = document.createElement('div');
-            div.className = `cube ${data.type}`;
-            
-            let symbol = "";
-            let val = 0;
-            
-            if (data.type === 'source') {
-                symbol = "⚡";
-                val = data.level;
-            } else if (data.type === 'adder') {
-                symbol = "+";
-                val = STATS.adder.base + (STATS.adder.growth * (data.level - 1));
-            } else if (data.type === 'mult') {
-                symbol = "x";
-                val = (STATS.mult.base + (STATS.mult.growth * (data.level - 1))).toFixed(1);
-            }
+        // --- DRAG AND DROP ---
 
-            div.innerHTML = `
-                <span class="cube-lvl">Lv${data.level}</span>
-                <span class="cube-val">${val}</span>
-                <span class="cube-type">${symbol}</span>
-            `;
-            return div;
+        function dragStartShop(e, type) {
+            e.dataTransfer.setData("source", "shop");
+            e.dataTransfer.setData("type", type);
         }
 
-        function updateUI() {
-            ui.score.textContent = Math.floor(game.score);
-            ui.rate.textContent = `Yield: ${calculateChain().toFixed(1)}`;
-            
-            ui.costs.adder.textContent = `$${game.costs.adder}`;
-            ui.costs.mult.textContent = `$${game.costs.mult}`;
-            ui.costs.expand.textContent = `$${game.expandCost}`;
+        function dragStartGrid(e, x, y) {
+            e.dataTransfer.setData("source", "grid");
+            e.dataTransfer.setData("origin", `${x},${y}`);
+            // Keep original visible but maybe dim? 
+            // Default HTML5 drag behavior is fine.
         }
 
-        // --- SAVE SYSTEM ---
-        function saveGame() {
-            localStorage.setItem('FishboneSave', JSON.stringify(game));
-            alert("Game Saved");
-        }
-        
-        function resetGame() {
-            if(confirm("Reset?")) {
-                localStorage.removeItem('FishboneSave');
-                location.reload();
+        function handleDrop(e, x, y) {
+            e.preventDefault();
+            e.target.closest('.slot').classList.remove('drag-target');
+            
+            const source = e.dataTransfer.getData("source");
+            const targetKey = `${x},${y}`;
+            const targetCell = game.grid[targetKey];
+
+            if (source === "shop") {
+                const type = e.dataTransfer.getData("type");
+                buyAndPlace(type, targetKey);
+            } 
+            else if (source === "grid") {
+                const originKey = e.dataTransfer.getData("origin");
+                if (originKey === targetKey) return;
+                
+                moveOrMerge(originKey, targetKey);
             }
         }
-        
-        function loadGame() {
-            const d = localStorage.getItem('FishboneSave');
-            if (d) {
-                game = JSON.parse(d);
+
+        function buyAndPlace(type, key) {
+            const cost = game.costs[type];
+            const cell = game.grid[key];
+
+            // If slot occupied
+            if (cell.cube) {
+                // Try merge logic if same type? Or just block?
+                if (cell.cube.type === type && game.score >= cost) {
+                    game.score -= cost;
+                    game.costs[type] = Math.ceil(game.costs[type] * 1.3);
+                    cell.cube.level++;
+                    updateUI();
+                    renderWorld();
+                }
+                return;
             }
-            renderChain();
+
+            // Buy new
+            if (game.score >= cost) {
+                game.score -= cost;
+                game.costs[type] = Math.ceil(game.costs[type] * 1.3);
+                cell.cube = { type: type, level: 1 };
+                updateUI();
+                renderWorld();
+            }
+        }
+
+        function moveOrMerge(originKey, targetKey) {
+            const originCell = game.grid[originKey];
+            const targetCell = game.grid[targetKey];
+            
+            if (!originCell.cube) return; // Ghost drag?
+
+            if (!targetCell.cube) {
+                // Move
+                targetCell.cube = originCell.cube;
+                originCell.cube = null;
+            } else {
+                // Interaction
+                if (originCell.cube.type === targetCell.cube.type) {
+                    // Merge (Upgrade Target, Destroy Origin)
+                    // Add levels? Or just +1? Let's sum levels
+                    targetCell.cube.level += originCell.cube.level;
+                    originCell.cube = null;
+                } else {
+                    // Swap
+                    let temp = targetCell.cube;
+                    targetCell.cube = originCell.cube;
+                    originCell.cube = temp;
+                }
+            }
+            renderWorld();
             updateUI();
         }
 
-        // Init
-        loadGame();
+        // --- SYSTEM ---
+
+        function updateUI() {
+            ui.score.textContent = Math.floor(game.score);
+            ui.rate.textContent = `Yield: ${calculateYield().toFixed(1)}`;
+            ui.costs.adder.textContent = game.costs.adder;
+            ui.costs.mult.textContent = game.costs.mult;
+        }
+
+        function saveGame() {
+            localStorage.setItem('InfiniteFactorySave', JSON.stringify(game));
+            alert("Saved");
+        }
+
+        function resetGame() {
+            if(confirm("Reset?")) {
+                localStorage.removeItem('InfiniteFactorySave');
+                location.reload();
+            }
+        }
+
+        function loadGame() {
+            const d = localStorage.getItem('InfiniteFactorySave');
+            if(d) {
+                game = JSON.parse(d);
+            }
+            renderWorld();
+            updateUI();
+        }
+
+        // --- CENTER ON LOAD ---
+        window.onload = () => {
+            loadGame();
+            // Scroll to center
+            // Viewport center - Screen center
+            const startX = CENTER_X - (window.innerWidth / 2) + (CELL_SIZE/2);
+            const startY = (4000 - CENTER_Y) - (window.innerHeight / 2); // Invert Y logic for ScrollTop usually
+            
+            // Actually, since we used bottom: px, high Y is near the top of the container physically if container is relative?
+            // No, `bottom: 0` is at the bottom of the container. 
+            // So Y=2000 is 2000px from bottom.
+            // ScrollTop 0 is Top of container.
+            // Height 4000. 
+            // We want to see Y=2000. That is 2000px from top.
+            
+            ui.viewport.scrollLeft = startX;
+            ui.viewport.scrollTop = 4000 - CENTER_Y - (window.innerHeight/2);
+        };
 
     </script>
 </body>
