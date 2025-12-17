@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Fishbone Factory V7 (Signs & Vars)</title>
+    <title>Flow Factory V8 (Directional)</title>
     <style>
         :root {
             --bg-color: #1a1b26;
@@ -15,7 +15,7 @@
             --accent-red: #f7768e;
             --accent-gold: #e0af68;
             --accent-purple: #bb9af7;
-            --accent-cyan: #7dcfff;
+            --dir-indicator: #ff4757;
         }
 
         body {
@@ -27,6 +27,7 @@
             display: flex;
             flex-direction: column;
             height: 100vh;
+            user-select: none;
         }
 
         /* --- HUD --- */
@@ -59,7 +60,6 @@
             font-weight: bold; font-size: 1rem; position: relative; overflow: hidden;
         }
         #boost-btn.active { background: var(--accent-purple); color: #1a1b26; box-shadow: 0 0 15px var(--accent-purple); }
-        .boost-fill { position: absolute; bottom: 0; left: 0; height: 3px; background: var(--accent-purple); width: 0%; transition: width 1s linear; }
 
         /* --- VIEWPORT --- */
         .viewport {
@@ -70,8 +70,11 @@
         .viewport:active { cursor: grabbing; }
         .world-container { position: relative; width: 20000px; height: 10000px; }
 
-        /* --- NODES (Numbers) --- */
-        .node-wrapper { position: absolute; width: 100px; height: 100px; display: flex; justify-content: center; align-items: center; z-index: 10; }
+        /* --- NODES --- */
+        .node-wrapper { 
+            position: absolute; width: 100px; height: 100px; 
+            display: flex; justify-content: center; align-items: center; z-index: 10; 
+        }
         
         .slot {
             width: 90px; height: 90px; background: var(--slot-bg);
@@ -80,43 +83,51 @@
         }
         .slot.drag-target { border-color: var(--accent-blue); box-shadow: 0 0 15px var(--accent-blue); transform: scale(1.05); }
 
-        /* --- SIGNS (Small Boxes) --- */
-        .sign-wrapper {
-            position: absolute; width: 40px; height: 40px; z-index: 5;
-            display: flex; justify-content: center; align-items: center;
-        }
-        .sign-slot {
-            width: 36px; height: 36px; background: #15161e;
-            border: 1px dashed #565f89; border-radius: 6px;
-            display: flex; justify-content: center; align-items: center;
-            color: #565f89; font-size: 1.2rem; transition: 0.2s;
-        }
-        .sign-slot.drag-target { border-color: var(--accent-green); box-shadow: 0 0 10px var(--accent-green); }
-        
-        /* --- CUBES & SIGNS --- */
+        /* --- CUBES --- */
         .cube {
             width: 82px; height: 82px; border-radius: 8px;
             display: flex; flex-direction: column; justify-content: center; align-items: center;
-            font-weight: bold; box-shadow: 0 5px 10px rgba(0,0,0,0.4); cursor: grab; z-index: 20; pointer-events: auto;
+            font-weight: bold; box-shadow: 0 5px 10px rgba(0,0,0,0.4); cursor: pointer; z-index: 20; 
+            pointer-events: auto; position: relative;
+            transition: opacity 0.3s;
+            opacity: 0.4; /* Default dimmed (inactive) */
         }
-        .cube.source { background: var(--accent-gold); color: #1a1b26; border: 2px solid #ff9e64; cursor: pointer; }
+        .cube.active { opacity: 1; box-shadow: 0 0 15px rgba(255, 255, 255, 0.1); }
+
+        .cube.source { background: var(--accent-gold); color: #1a1b26; border: 2px solid #ff9e64; opacity: 1; }
         .cube.source:active { transform: scale(0.95); }
+        .cube.adder { background: var(--accent-blue); color: #1a1b26; border: 2px solid #7dcfff; }
+        .cube.mult { background: var(--accent-red); color: #1a1b26; border: 2px solid #ff9e64; }
         
-        .cube.constant { background: var(--accent-blue); color: #1a1b26; border: 2px solid #7dcfff; }
-        .cube.variable { background: var(--accent-cyan); color: #1a1b26; border: 2px solid #b4befe; opacity: 0.9; }
+        .cube-val { font-size: 1.4rem; pointer-events: none; }
+        .cube-lvl { font-size: 0.7rem; opacity: 0.8; pointer-events: none; }
 
-        .sign-item {
-            width: 36px; height: 36px; border-radius: 6px;
-            display: flex; justify-content: center; align-items: center;
-            font-weight: bold; font-size: 1.5rem; cursor: grab; pointer-events: auto;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.5);
+        /* DIRECTION INDICATOR (Triangle) */
+        .dir-arrow {
+            position: absolute; width: 0; height: 0;
+            border-left: 8px solid transparent;
+            border-right: 8px solid transparent;
+            border-bottom: 12px solid var(--dir-indicator);
+            /* Centering logic handled in JS rotation */
+            pointer-events: none;
         }
-        .sign-item.plus { background: var(--accent-green); color: #1a1b26; }
-        .sign-item.mult { background: var(--accent-red); color: #1a1b26; }
+        
+        /* Positioning classes for arrow */
+        .cube[data-dir="up"] .dir-arrow { top: -8px; transform: rotate(0deg); }
+        .cube[data-dir="right"] .dir-arrow { right: -8px; top: 35px; transform: rotate(90deg); }
+        .cube[data-dir="down"] .dir-arrow { bottom: -8px; transform: rotate(180deg); }
+        .cube[data-dir="left"] .dir-arrow { left: -8px; top: 35px; transform: rotate(270deg); }
 
-        .cube-val { font-size: 1.5rem; }
-        .cube-lbl { font-size: 0.6rem; text-transform: uppercase; opacity: 0.7; }
+        /* Source arrows (all sides) */
+        .source-arrow {
+            position: absolute; width: 0; height: 0;
+            border-left: 6px solid transparent;
+            border-right: 6px solid transparent;
+            border-bottom: 10px solid #1a1b26;
+            pointer-events: none; opacity: 0.5;
+        }
 
+        /* --- EXPANSION --- */
         .expand-btn {
             width: 30px; height: 30px; background: #24283b;
             border: 2px dashed #565f89; border-radius: 50%;
@@ -128,24 +139,16 @@
 
         /* --- DOCK --- */
         .shop-dock {
-            height: 140px; background: #16161e; border-top: 1px solid #414868;
-            display: flex; justify-content: center; align-items: center; gap: 20px; z-index: 100; flex-shrink: 0;
+            height: 130px; background: #16161e; border-top: 1px solid #414868;
+            display: flex; justify-content: center; align-items: center; gap: 30px; z-index: 100; flex-shrink: 0;
         }
-        .shop-group {
-            display: flex; gap: 15px; padding: 0 20px;
-            border-right: 1px solid #292e42;
-        }
-        .shop-group:last-child { border-right: none; }
-        .shop-label { position: absolute; bottom: 5px; font-size: 0.7rem; color: #565f89; text-transform: uppercase; letter-spacing: 1px; width: 100%; text-align: center; }
-        
-        .shop-item { display: flex; flex-direction: column; align-items: center; cursor: grab; position: relative; transition: transform 0.1s; }
+        .shop-item { display: flex; flex-direction: column; align-items: center; cursor: grab; transition: transform 0.1s; }
         .shop-item:hover { transform: translateY(-5px); }
-        
         .shop-icon {
-            width: 50px; height: 50px; border-radius: 8px; display: flex; justify-content: center; align-items: center;
-            font-weight: bold; color: #1a1b26; font-size: 1.2rem; margin-bottom: 5px; box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+            width: 60px; height: 60px; border-radius: 8px; display: flex; justify-content: center; align-items: center;
+            font-weight: bold; color: #1a1b26; font-size: 1.5rem; margin-bottom: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.3);
         }
-        .cost-pill { background: #24283b; color: var(--accent-gold); padding: 2px 8px; border-radius: 10px; font-size: 0.75rem; font-weight: bold; border: 1px solid #414868; }
+        .cost-pill { background: #24283b; color: var(--accent-gold); padding: 4px 10px; border-radius: 12px; font-size: 0.85rem; font-weight: bold; border: 1px solid #414868; }
 
         /* --- MENU --- */
         .menu-overlay {
@@ -157,7 +160,6 @@
         .menu-overlay.open { transform: translateX(0); }
         .menu-header { padding: 20px; border-bottom: 1px solid #414868; display: flex; justify-content: space-between; align-items: center; }
         .menu-content { padding: 20px; overflow-y: auto; flex: 1; }
-        .eq-box { background: #0f0f14; padding: 15px; border-radius: 8px; font-family: monospace; color: var(--accent-green); font-size: 0.85rem; white-space: pre-wrap; word-break: break-all; margin-bottom: 20px; border: 1px dashed #414868; }
         .full-btn { width: 100%; padding: 12px; margin-bottom: 10px; background: #24283b; border: 1px solid #414868; color: var(--text); border-radius: 6px; cursor: pointer; text-align: left; display: flex; justify-content: space-between; }
         .full-btn:hover { background: #414868; }
 
@@ -184,10 +186,6 @@
         </div>
         <div class="menu-content">
             <div style="margin-bottom: 30px;">
-                <div style="font-size: 0.75rem; color: #565f89; margin-bottom: 10px; font-weight: bold;">MATH LOGIC</div>
-                <div class="eq-box" id="equation-text">Waiting for input...</div>
-            </div>
-            <div style="margin-bottom: 30px;">
                 <div style="font-size: 0.75rem; color: #565f89; margin-bottom: 10px; font-weight: bold;">UPGRADES</div>
                 <button class="full-btn" onclick="upgradeAutoMult()">
                     <div><strong>Auto-Multiplier</strong><br><small id="auto-rate-desc">x0.5 / sec</small></div>
@@ -204,28 +202,13 @@
     </div>
 
     <div class="shop-dock">
-        <div class="shop-group">
-            <div class="shop-item" draggable="true" ondragstart="dragStartShop(event, 'constant')">
-                <div class="shop-icon" style="background: var(--accent-blue);">#</div>
-                <span class="cost-pill" id="cost-constant">25</span>
-                <span style="font-size: 0.6rem; color: #565f89; margin-top:2px;">CONST</span>
-            </div>
-            <div class="shop-item" draggable="true" ondragstart="dragStartShop(event, 'variable')">
-                <div class="shop-icon" style="background: var(--accent-cyan);">V</div>
-                <span class="cost-pill" id="cost-variable">100</span>
-                <span style="font-size: 0.6rem; color: #565f89; margin-top:2px;">VAR</span>
-            </div>
+        <div class="shop-item" draggable="true" ondragstart="dragStartShop(event, 'adder')">
+            <div class="shop-icon" style="background: var(--accent-blue);">+</div>
+            <span class="cost-pill" id="cost-adder">25</span>
         </div>
-        
-        <div class="shop-group">
-            <div class="shop-item" draggable="true" ondragstart="dragStartShop(event, 'plus')">
-                <div class="shop-icon" style="background: var(--accent-green); width: 40px; height: 40px; font-size: 1.2rem;">+</div>
-                <span class="cost-pill" id="cost-plus">10</span>
-            </div>
-            <div class="shop-item" draggable="true" ondragstart="dragStartShop(event, 'mult')">
-                <div class="shop-icon" style="background: var(--accent-red); width: 40px; height: 40px; font-size: 1.2rem;">x</div>
-                <span class="cost-pill" id="cost-mult">50</span>
-            </div>
+        <div class="shop-item" draggable="true" ondragstart="dragStartShop(event, 'mult')">
+            <div class="shop-icon" style="background: var(--accent-red);">x</div>
+            <span class="cost-pill" id="cost-mult">100</span>
         </div>
     </div>
 
@@ -233,18 +216,19 @@
         const CELL_SIZE = 120;
         const CENTER_X = 10000;
         const CENTER_Y = 5000;
-        const STATS = { constant: { base: 1, growth: 1 }, variable: { base: 0, growth: 0 } };
+        const STATS = { adder: { base: 1, growth: 1 }, mult: { base: 1.1, growth: 0.1 } };
         const BOOST_DURATION = 30000; const BOOST_COOLDOWN = 1800000;
+        const DIRS = ['up', 'right', 'down', 'left'];
 
         let game = {
             score: 0,
-            costs: { constant: 25, variable: 100, plus: 10, mult: 50 },
+            costs: { adder: 25, mult: 100 },
             autoMult: 0.5, autoCost: 500, lastBoost: 0,
-            grid: { "0,0": { unlocked: true, cube: { type: 'source', level: 1 } } },
-            signs: {} // Key: "x,y|h" (horizontal input) or "x,y|v" (vertical input)
+            grid: { "0,0": { unlocked: true, cube: { type: 'source', level: 1, dir: 'all' } } }
         };
 
         let boostActive = false;
+        let activeNodes = new Set(); // Tracks which nodes are receiving power
 
         const ui = {
             world: document.getElementById('world'),
@@ -252,110 +236,146 @@
             score: document.getElementById('score'),
             rate: document.getElementById('rate'),
             secRate: document.getElementById('sec-rate'),
-            eqText: document.getElementById('equation-text'),
             boostBtn: document.getElementById('boost-btn'),
             menu: document.getElementById('menu'),
             autoDesc: document.getElementById('auto-rate-desc'),
             autoCost: document.getElementById('auto-rate-cost'),
-            costs: { 
-                constant: document.getElementById('cost-constant'), 
-                variable: document.getElementById('cost-variable'),
-                plus: document.getElementById('cost-plus'),
-                mult: document.getElementById('cost-mult')
-            }
+            costs: { adder: document.getElementById('cost-adder'), mult: document.getElementById('cost-mult') }
         };
 
-        // --- GAME LOOP (1 Sec) ---
+        // --- GAME LOOP ---
         setInterval(() => {
-            let yieldVal = calculateYield();
+            let yieldVal = calculateFlow(); // Returns total value of all active endpoints
+            
+            // Auto Clicker logic
             let totalPerSec = yieldVal * game.autoMult;
             if(boostActive) totalPerSec *= 10;
 
             if(totalPerSec > 0) {
                 game.score += totalPerSec;
+                // Pulse Source
                 const src = document.querySelector('.cube.source');
-                if(src) { src.style.transform = "scale(0.95)"; setTimeout(()=>src.style.transform="scale(1)", 100); }
+                if(src) { src.style.transform = "scale(0.9)"; setTimeout(()=>src.style.transform="scale(1)", 100); }
                 updateUI();
             }
             updateBoostBtn();
         }, 1000);
 
-        // --- MATH ENGINE ---
-        function calculateYield() {
-            // Sort Columns
-            let cols = {};
-            let minX = 0;
-            for(let k in game.grid) {
-                let [x,y] = k.split(',').map(Number);
-                if(!cols[x]) cols[x] = [];
-                cols[x].push({y, cube: game.grid[k].cube});
-                if(x < minX) minX = x;
-            }
+        // --- MATH ENGINE (PUSH SYSTEM) ---
+        function calculateFlow() {
+            // BFS Propogation
+            let totalYield = 0;
+            activeNodes.clear();
 
-            // Recursive Calculator
-            // We calculate the value "Emitted" by a node at x,y
-            // Start at 0,0 (Source) which collects from its inputs.
+            // Queue holds: { x, y, value }
+            // Start at source with value 1
+            let queue = [{x:0, y:0, val: 1}];
             
-            // Simplified Flow:
-            // 1. Calculate values of nodes from left-most to right.
-            // 2. We need a stored value for each node for this tick.
-            let nodeValues = {};
+            // Track visited for this specific tick to prevent infinite loops in circular chains
+            let visitedInPath = new Set(); 
 
-            for (let x = minX; x <= 0; x++) {
-                if (!cols[x]) continue;
-                // Sort Top to Bottom for processing order
-                cols[x].sort((a,b) => b.y - a.y);
+            // Simple loop protection: Max steps
+            let steps = 0;
+            
+            while(queue.length > 0 && steps < 1000) {
+                let curr = queue.shift();
+                let key = `${curr.x},${curr.y}`;
+                let cell = game.grid[key];
+
+                if(!cell || !cell.cube) continue;
                 
-                cols[x].forEach(n => {
-                    let y = n.y;
-                    if(!n.cube) return; // Empty slot
-                    
-                    let key = `${x},${y}`;
-                    
-                    // 1. Get Self Value
-                    let selfVal = 0;
-                    if (n.cube.type === 'source') selfVal = 1;
-                    else if (n.cube.type === 'constant') selfVal = n.cube.level;
-                    else if (n.cube.type === 'variable') selfVal = 0; // Vars are pass-through mostly
+                // Mark as active so it glows
+                activeNodes.add(key);
 
-                    // 2. Get Input from Left (Horizontal)
-                    let leftKey = `${x-1},${y}`;
-                    let leftVal = nodeValues[leftKey] || 0;
-                    let signH = game.signs[`${key}|h`];
+                // Calculate Output Value
+                let outputVal = curr.val;
+                
+                // Logic: If I am an Adder, I add my power to the signal.
+                // If I am a Mult, I multiply the signal.
+                // Source just passes 1.
+                if(cell.cube.type !== 'source') {
+                    let power = getPower(cell.cube);
+                    if(cell.cube.type === 'adder') outputVal += power;
+                    else if(cell.cube.type === 'mult') outputVal *= power;
                     
-                    // Apply Horizontal Sign
-                    let hResult = 0;
-                    if (n.cube.type === 'variable') {
-                        // Variable logic: Pass through input. 
-                        // If no sign, input is blocked (0).
-                        if(signH === 'plus') hResult = leftVal;
-                        else if(signH === 'mult') hResult = leftVal;
-                        else hResult = 0; // Broken connection
-                    } else {
-                        // Constant/Source logic: Combine Input with Self
-                        if(signH === 'plus') hResult = leftVal + selfVal;
-                        else if(signH === 'mult') hResult = leftVal * selfVal;
-                        else hResult = selfVal; // No input, just self
+                    // Add to Total Yield (Every active machine contributes)
+                    totalYield += outputVal;
+                }
+
+                // Push to neighbors
+                // Source pushes to ALL neighbors
+                // Others push based on DIR
+                let targets = [];
+
+                if(cell.cube.type === 'source') {
+                    targets.push({x: curr.x+1, y: curr.y}); // Right
+                    targets.push({x: curr.x-1, y: curr.y}); // Left
+                    targets.push({x: curr.x, y: curr.y+1}); // Up (Y is up in CSS bottom logic)
+                    targets.push({x: curr.x, y: curr.y-1}); // Down
+                } else {
+                    let d = cell.cube.dir || 'right';
+                    if(d === 'right') targets.push({x: curr.x+1, y: curr.y});
+                    if(d === 'left') targets.push({x: curr.x-1, y: curr.y});
+                    if(d === 'up') targets.push({x: curr.x, y: curr.y+1});
+                    if(d === 'down') targets.push({x: curr.x, y: curr.y-1});
+                }
+
+                targets.forEach(t => {
+                    let tKey = `${t.x},${t.y}`;
+                    // Only push if target exists and has a cube
+                    if(game.grid[tKey] && game.grid[tKey].cube) {
+                        // Loop prevention: In a simple accumulation model, loops explode values.
+                        // We need to limit recursion depth or use a dampening factor.
+                        // For this idle game, let's just allow flow if not visited in this specific chain branch? 
+                        // Simplified: Only process if we haven't processed this node more than once per tick?
+                        // Actually, let's just let it flow. The Set 'visitedInPath' checks strict loops.
+                        
+                        // NOTE: For performance and simplicity, if a node is already in 'activeNodes' this tick, 
+                        // we stop to prevent infinite infinite addition.
+                        if(!activeNodes.has(tKey)) {
+                            queue.push({x: t.x, y: t.y, val: outputVal});
+                        }
                     }
-
-                    // 3. Get Input from Top (Vertical)
-                    let topKey = `${x},${y+1}`;
-                    let topVal = nodeValues[topKey] || 0;
-                    let signV = game.signs[`${key}|v`];
-
-                    // Apply Vertical Sign (combining with the H-Result)
-                    let finalRes = hResult;
-                    if(signV === 'plus') finalRes += topVal;
-                    else if(signV === 'mult') finalRes *= topVal;
-
-                    nodeValues[key] = finalRes;
                 });
+                steps++;
             }
+            
+            // Update Visuals (Dim inactive nodes)
+            document.querySelectorAll('.cube').forEach(el => {
+                let k = el.dataset.key;
+                if(k === "0,0") return; // Source always active
+                if(activeNodes.has(k)) el.classList.add('active');
+                else el.classList.remove('active');
+            });
 
-            return nodeValues["0,0"] || 1; // Default to 1 if something breaks
+            return totalYield;
+        }
+
+        function getPower(c) {
+            if(c.type==='adder') return STATS.adder.base + (STATS.adder.growth*(c.level-1));
+            if(c.type==='mult') return STATS.mult.base + (STATS.mult.growth*(c.level-1));
+            return 1;
         }
 
         // --- INTERACTION ---
+        
+        function rotateCube(x, y) {
+            let key = `${x},${y}`;
+            let cell = game.grid[key];
+            if(!cell || !cell.cube || cell.cube.type === 'source') return; // Source doesn't rotate
+
+            let currentDirIdx = DIRS.indexOf(cell.cube.dir || 'right');
+            let nextDir = DIRS[(currentDirIdx + 1) % 4];
+            cell.cube.dir = nextDir;
+            
+            // Redraw just this cube? Or whole world?
+            // Simple approach: re-render world to update arrow classes
+            renderWorld();
+            
+            // Recalculate immediate flow visualization
+            calculateFlow();
+        }
+
         function unlockSlot(x,y) {
             let cost = getExpCost(x,y);
             if(game.score >= cost) {
@@ -365,62 +385,39 @@
             }
         }
         function getExpCost(x,y) {
+            let dist = Math.sqrt(x*x + y*y); // Distance from center
             let base = 50;
-            if(y===0) return Math.floor(base * Math.pow(Math.abs(x), 1.5)) + base;
-            return Math.floor(base * Math.pow(y+1, 2.8));
-        }
-
-        function manualClick() {
-            let val = calculateYield();
-            game.score += val;
-            const src = document.querySelector('.cube.source');
-            if(src) { src.style.transform = "scale(0.9)"; setTimeout(()=>src.style.transform="scale(1)", 100); }
-            updateUI();
+            return Math.floor(base * Math.pow(dist+1, 2.2));
         }
 
         // --- DRAG & DROP ---
         function dragStartShop(e, type) { e.dataTransfer.setData('src', 'shop'); e.dataTransfer.setData('type', type); }
         
-        function handleDrop(e, x, y, isSign, dir) {
+        function handleDrop(e, x, y) {
             e.preventDefault();
             e.target.classList.remove('drag-target');
             let src = e.dataTransfer.getData('src');
             let type = e.dataTransfer.getData('type');
+            let key = `${x},${y}`;
+            let cell = game.grid[key];
 
             if(src === 'shop') {
-                // Is this a sign or a number?
-                let isShopSign = (type === 'plus' || type === 'mult');
-                
-                if (isSign && !isShopSign) return; // Can't put number in sign slot
-                if (!isSign && isShopSign) return; // Can't put sign in number slot
-
                 let cost = game.costs[type];
                 
-                if (isSign) {
-                    // Place Sign
-                    let key = `${x},${y}|${dir}`;
+                // Logic: Buy New or Upgrade
+                if(cell.cube && cell.cube.type === type) {
                     if(game.score >= cost) {
                         game.score -= cost;
-                        game.signs[key] = type;
-                        renderWorld(); updateUI();
-                    }
-                } else {
-                    // Place Number
-                    let cell = game.grid[`${x},${y}`];
-                    // Upgrade logic
-                    if(cell.cube && cell.cube.type === type && type === 'constant') {
-                        if(game.score >= cost) {
-                            game.score -= cost;
-                            game.costs[type] = Math.ceil(game.costs[type]*1.3);
-                            cell.cube.level++;
-                            renderWorld(); updateUI();
-                        }
-                    } else if (!cell.cube && game.score >= cost) {
-                        game.score -= cost;
                         game.costs[type] = Math.ceil(game.costs[type]*1.3);
-                        cell.cube = {type, level:1};
+                        cell.cube.level++;
                         renderWorld(); updateUI();
                     }
+                } else if (!cell.cube && game.score >= cost) {
+                    game.score -= cost;
+                    game.costs[type] = Math.ceil(game.costs[type]*1.3);
+                    // Default direction away from center roughly, or just Right
+                    cell.cube = {type, level:1, dir: 'right'}; 
+                    renderWorld(); updateUI();
                 }
             }
         }
@@ -429,11 +426,13 @@
         function renderWorld() {
             ui.world.innerHTML = '';
             
+            let seen = new Set();
+
             for(let k in game.grid) {
+                seen.add(k);
                 let [x,y] = k.split(',').map(Number);
                 let cell = game.grid[k];
 
-                // 1. NODE SLOT
                 let wrap = document.createElement('div');
                 wrap.className = 'node-wrapper';
                 wrap.style.left = (CENTER_X + (x*CELL_SIZE)) + 'px';
@@ -443,98 +442,78 @@
                 slot.className = 'slot';
                 slot.ondragover = (e) => { e.preventDefault(); slot.classList.add('drag-target'); };
                 slot.ondragleave = () => slot.classList.remove('drag-target');
-                slot.ondrop = (e) => handleDrop(e, x, y, false);
+                slot.ondrop = (e) => handleDrop(e, x, y);
 
                 if(cell.cube) {
                     let c = document.createElement('div');
                     c.className = `cube ${cell.cube.type}`;
-                    c.draggable = cell.cube.type !== 'source';
-                    c.ondragstart = (e) => { e.dataTransfer.setData('src','grid'); /* impl grid move later */ };
+                    c.dataset.key = k;
+                    // Rotation click
+                    c.onclick = () => {
+                        if(cell.cube.type === 'source') {
+                            // Source click = Manual Harvest
+                            let yieldVal = calculateFlow();
+                            game.score += (yieldVal || 1);
+                            c.style.transform = "scale(0.9)"; 
+                            setTimeout(()=>c.style.transform="scale(1)", 100);
+                            updateUI();
+                        } else {
+                            rotateCube(x, y);
+                        }
+                    };
+
+                    // Add Direction Attribute
+                    if(cell.cube.type !== 'source') {
+                        c.setAttribute('data-dir', cell.cube.dir || 'right');
+                        // Red Triangle
+                        let arrow = document.createElement('div');
+                        arrow.className = 'dir-arrow';
+                        c.appendChild(arrow);
+                    } else {
+                        // Source has passive arrows indicating flow out
+                        ['top: -10px; left: 30px; transform: rotate(0deg)', 
+                         'bottom: -10px; left: 30px; transform: rotate(180deg)',
+                         'right: -10px; top: 30px; transform: rotate(90deg)',
+                         'left: -10px; top: 30px; transform: rotate(270deg)'].forEach(style => {
+                            let sa = document.createElement('div');
+                            sa.className = 'source-arrow';
+                            sa.style.cssText = style;
+                            c.appendChild(sa);
+                        });
+                    }
+
+                    let txt = cell.cube.type==='source' ? "⚡" : (cell.cube.type==='adder' ? `+${getPower(cell.cube)}` : `x${getPower(cell.cube).toFixed(1)}`);
+                    let sub = cell.cube.type==='source' ? "Source" : `Lv ${cell.cube.level}`;
                     
-                    let txt = ""; let sub = "";
-                    if(cell.cube.type==='source') { txt="⚡"; sub="End"; }
-                    else if(cell.cube.type==='constant') { txt=cell.cube.level; sub="CONST"; }
-                    else if(cell.cube.type==='variable') { txt="V"; sub="VAR"; }
-                    
-                    c.innerHTML = `<span class="cube-val">${txt}</span><span class="cube-lbl">${sub}</span>`;
-                    if(cell.cube.type==='source') c.onclick = manualClick;
+                    c.innerHTML += `<span class="cube-val">${txt}</span><span class="cube-lvl">${sub}</span>`;
                     slot.appendChild(c);
                 }
                 wrap.appendChild(slot);
                 ui.world.appendChild(wrap);
-
-                // 2. SIGN SLOT (Horizontal - Left of this node)
-                if (x !== 0 || y !== 0) { // Source 0,0 doesn't imply it has a left input necessarily, but actually it does in main line
-                    // Actually, H-slot is between (x-1) and x. 
-                    // Let's render H-Slot attached to every node except if it's far left edge? 
-                    // No, render H-slot to the LEFT of this node.
-                    let signWrapH = document.createElement('div');
-                    signWrapH.className = 'sign-wrapper';
-                    signWrapH.style.left = (CENTER_X + (x*CELL_SIZE) - 45) + 'px'; // Halfway left
-                    signWrapH.style.bottom = (CENTER_Y + (y*CELL_SIZE) + 25) + 'px'; // Centered Y
-
-                    let sSlotH = document.createElement('div');
-                    sSlotH.className = 'sign-slot';
-                    let hKey = `${x},${y}|h`;
-                    let sTypeH = game.signs[hKey];
-                    if(sTypeH) {
-                        let si = document.createElement('div');
-                        si.className = `sign-item ${sTypeH}`;
-                        si.innerHTML = sTypeH==='plus' ? '+' : 'x';
-                        sSlotH.appendChild(si);
-                    } else { sSlotH.innerHTML = "•"; }
-                    
-                    sSlotH.ondragover = (e) => { e.preventDefault(); sSlotH.classList.add('drag-target'); };
-                    sSlotH.ondragleave = () => sSlotH.classList.remove('drag-target');
-                    sSlotH.ondrop = (e) => handleDrop(e, x, y, true, 'h');
-                    signWrapH.appendChild(sSlotH);
-                    ui.world.appendChild(signWrapH);
-                }
-
-                // 3. SIGN SLOT (Vertical - Top of this node)
-                // Actually inputs come from Top (y+1) into y. So Sign is ABOVE.
-                let signWrapV = document.createElement('div');
-                signWrapV.className = 'sign-wrapper';
-                signWrapV.style.left = (CENTER_X + (x*CELL_SIZE) + 25) + 'px'; // Centered X
-                signWrapV.style.bottom = (CENTER_Y + (y*CELL_SIZE) + 95) + 'px'; // Above
-                
-                let sSlotV = document.createElement('div');
-                sSlotV.className = 'sign-slot';
-                let vKey = `${x},${y}|v`;
-                let sTypeV = game.signs[vKey];
-                if(sTypeV) {
-                    let si = document.createElement('div');
-                    si.className = `sign-item ${sTypeV}`;
-                    si.innerHTML = sTypeV==='plus' ? '+' : 'x';
-                    sSlotV.appendChild(si);
-                } else { sSlotV.innerHTML = "•"; }
-
-                sSlotV.ondragover = (e) => { e.preventDefault(); sSlotV.classList.add('drag-target'); };
-                sSlotV.ondragleave = () => sSlotV.classList.remove('drag-target');
-                sSlotV.ondrop = (e) => handleDrop(e, x, y, true, 'v');
-                signWrapV.appendChild(sSlotV);
-                ui.world.appendChild(signWrapV);
             }
 
-            // Expansions
-            let seen = new Set(Object.keys(game.grid));
-            let potential = new Set();
+            // Expansions (Check neighbors of all unlocked)
             for(let k in game.grid) {
                 let [x,y] = k.split(',').map(Number);
-                if(y===0) potential.add(`${x-1},0`);
-                if(!(x===0 && y>=0)) potential.add(`${x},${y+1}`);
+                [[0,1],[0,-1],[1,0],[-1,0]].forEach(offset => {
+                    let nx = x + offset[0];
+                    let ny = y + offset[1];
+                    let nk = `${nx},${ny}`;
+                    if(!seen.has(nk)) {
+                        seen.add(nk); // Prevent duplicate buttons
+                        let btn = document.createElement('div');
+                        btn.className = 'expand-btn';
+                        btn.innerHTML = `+<div class="expand-cost">$${getExpCost(nx,ny)}</div>`;
+                        btn.onclick = () => unlockSlot(nx,ny);
+                        btn.style.left = (CENTER_X + (nx*CELL_SIZE)+35) + 'px';
+                        btn.style.bottom = (CENTER_Y + (ny*CELL_SIZE)+35) + 'px';
+                        ui.world.appendChild(btn);
+                    }
+                });
             }
-            potential.forEach(k => {
-                if(seen.has(k)) return;
-                let [x,y] = k.split(',').map(Number);
-                let btn = document.createElement('div');
-                btn.className = 'expand-btn';
-                btn.innerHTML = `+<div class="expand-cost">$${getExpCost(x,y)}</div>`;
-                btn.onclick = () => unlockSlot(x,y);
-                btn.style.left = (CENTER_X + (x*CELL_SIZE)+35) + 'px';
-                btn.style.bottom = (CENTER_Y + (y*CELL_SIZE)+35) + 'px';
-                ui.world.appendChild(btn);
-            });
+            
+            // Apply active states immediately
+            calculateFlow();
         }
 
         // --- SYSTEM ---
@@ -557,29 +536,22 @@
         }
         function updateUI() {
             ui.score.textContent = Math.floor(game.score);
-            let y = calculateYield();
+            let y = calculateFlow();
             ui.rate.textContent = `Yield: ${y}`;
             let sps = y * game.autoMult * (boostActive ? 10 : 1);
             ui.secRate.textContent = `${sps.toFixed(1)} / sec`;
-            
-            ui.costs.constant.textContent = game.costs.constant;
-            ui.costs.variable.textContent = game.costs.variable;
-            ui.costs.plus.textContent = game.costs.plus;
+            ui.costs.adder.textContent = game.costs.adder;
             ui.costs.mult.textContent = game.costs.mult;
             ui.autoDesc.textContent = `x${game.autoMult} / sec`;
             ui.autoCost.textContent = `$${game.autoCost}`;
-            
-            ui.eqText.textContent = `Formula evaluation running... \nCurrent Yield: ${y}`;
         }
         function toggleMenu() { ui.menu.classList.toggle('open'); }
-        function saveGame() { localStorage.setItem('FV7', JSON.stringify(game)); alert("Saved"); }
-        function resetGame() { if(confirm("Reset?")) { localStorage.removeItem('FV7'); location.reload(); } }
+        function saveGame() { localStorage.setItem('FV8', JSON.stringify(game)); alert("Saved"); }
+        function resetGame() { if(confirm("Reset?")) { localStorage.removeItem('FV8'); location.reload(); } }
         
         window.onload = () => {
-            let d = localStorage.getItem('FV7');
+            let d = localStorage.getItem('FV8');
             if(d) game = JSON.parse(d);
-            if(!game.signs) game.signs = {};
-            if(!game.autoMult) game.autoMult = 0.5;
             renderWorld(); updateUI(); updateBoostBtn();
             ui.viewport.scrollLeft = CENTER_X - window.innerWidth/2;
             ui.viewport.scrollTop = 10000 - CENTER_Y - window.innerHeight/2;
